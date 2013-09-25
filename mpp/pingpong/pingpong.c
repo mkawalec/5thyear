@@ -23,17 +23,17 @@ int main(int argc, char *argv[])
         double start_time = MPI_Wtime();
 
         for(i = 0; i < iters; ++i) {
-            MPI_Ssend(&to_send, array_size, MPI_UNSIGNED, 1, 0, MPI_COMM_WORLD);
-            MPI_Recv(&temp_data, array_size, MPI_UNSIGNED, 1, 0, 
+            MPI_Ssend(to_send, array_size, MPI_UNSIGNED, 1, 0, MPI_COMM_WORLD);
+            MPI_Recv(temp_data, array_size, MPI_UNSIGNED, 1, 0, 
                     MPI_COMM_WORLD, &status);
         }
         printf("%lf", (double) iters / (MPI_Wtime() - start_time));
     }
     else if (rank == 1) {
         for(i = 0; i < iters; ++i) {
-            MPI_Recv(&temp_data, array_size, MPI_UNSIGNED, 0, 0, 
+            MPI_Recv(temp_data, array_size, MPI_UNSIGNED, 0, 0, 
                     MPI_COMM_WORLD, &status);
-            MPI_Ssend(&temp_data, array_size, MPI_UNSIGNED, 0, 0, MPI_COMM_WORLD);
+            MPI_Ssend(temp_data, array_size, MPI_UNSIGNED, 0, 0, MPI_COMM_WORLD);
         }
     }
 
