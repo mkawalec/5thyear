@@ -52,7 +52,6 @@ main(int argc, char *argv[])
         printf("Total time for %d repeats is %lf\n", repeats, MPI_Wtime() - start_time);
     }
 
-
     MPI_Finalize();
 
     return 0;
