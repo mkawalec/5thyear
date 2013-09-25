@@ -4,7 +4,6 @@
 
 double compute_pi(size_t lower_bound, size_t upper_bound, size_t total)
 {
-    printf("Computing from %d to %d\n", lower_bound, upper_bound);
     size_t i;
     double pi = 0;
 
@@ -31,7 +30,6 @@ main(int argc, char *argv[])
         int start_iter = iter_per_rank * (rank - 1) + 1;
         pi = compute_pi(start_iter, start_iter + iter_per_rank, iterations);
 
-        printf("Sending from %d, value %lf\n", rank, pi / iterations);
         MPI_Ssend(&pi, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
     }
     else {
@@ -43,9 +41,8 @@ main(int argc, char *argv[])
             MPI_Recv(&temp_pi, 1, MPI_DOUBLE, MPI_ANY_SOURCE, 0, 
                     MPI_COMM_WORLD, &status);
             pi += temp_pi;
-            printf("receiving\n");
         }
-        pi = temp_pi / iterations;
+        pi /= iterations;
         printf("PI: %lf\n", pi);
     }
 
