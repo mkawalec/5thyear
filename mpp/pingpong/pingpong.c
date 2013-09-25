@@ -8,13 +8,13 @@ int main(int argc, char *argv[])
     MPI_Init(&argc, &argv);
 
     int rank, i, iters,  array_size;
-    unsigned int *to_send = malloc(sizeof(unsigned int) * array_size);
-    unsigned int *temp_data = malloc(sizeof(unsigned int) * array_size);
     char **char_ptr;
     MPI_Status status;
 
     iters = strtol(argv[1], char_ptr, 10);
     array_size = strtol(argv[2], char_ptr, 10);
+    unsigned int *to_send = malloc(sizeof(unsigned int) * array_size);
+    unsigned int *temp_data = malloc(sizeof(unsigned int) * array_size);
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
             MPI_Recv(&temp_data, array_size, MPI_UNSIGNED, 1, 0, 
                     MPI_COMM_WORLD, &status);
         }
-        printf("Sends per second: %lf\n", (double) iters / (MPI_Wtime() - start_time));
+        printf("%lf", (double) iters / (MPI_Wtime() - start_time));
     }
     else if (rank == 1) {
         for(i = 0; i < iters; ++i) {
