@@ -70,8 +70,8 @@ void init2(void){
                 c[i] = 0.0;
         }
 
-        for (i = 0; i < N; ++i){ 
-                for (j = 0; j < N; ++j){ 
+        for (i = 0; i < N; ++i) { 
+                for (j = 0; j < N; ++j) { 
                         b[i][j] = (double) (i * j + 1) / (double) (N*N); 
                 }
         }
@@ -80,8 +80,8 @@ void init2(void){
 void loop1(void) { 
         int i,j; 
 
-        for (i = 0; i < N; ++i){ 
-                for (j = N - 1; j > i; --j){
+        for (i = 0; i < N; ++i) { 
+                for (j = N - 1; j > i; --j) {
                         a[i][j] += cos(b[i][j]);
                 } 
         }
@@ -93,9 +93,9 @@ void loop2(void) {
 
         rN2 = 1.0 / (double) (N*N);  
 
-        for (i = 0; i < N; ++i){ 
-                for (j = 0; j < jmax[i]; ++j){
-                        for (k = 0; k < j; ++k){ 
+        for (i = 0; i < N; ++i) { 
+                for (j = 0; j < jmax[i]; ++j) {
+                        for (k = 0; k < j; ++k) { 
                                 c[i] += (k+1) * log (b[i][j]) * rN2;
                         } 
                 }
@@ -106,14 +106,13 @@ void valid1(void) {
         int i,j; 
         double suma; 
 
-        suma= 0.0; 
-        for (i=0; i<N; i++){ 
-                for (j=0; j<N; j++){ 
+        suma = 0.0; 
+        for (i = 0; i < N; ++i) { 
+                for (j = 0; j < N; ++j) { 
                         suma += a[i][j];
                 }
         }
         printf("Loop 1 check: Sum of a is %lf\n", suma);
-
 } 
 
 
@@ -121,10 +120,10 @@ void valid2(void) {
         int i; 
         double sumc; 
 
-        sumc= 0.0; 
-        for (i=0; i<N; i++){ 
+        sumc = 0.0; 
+        for (i = 0; i < N; ++i) 
                 sumc += c[i];
-        }
+
         printf("Loop 2 check: Sum of c is %f\n", sumc);
 } 
 
