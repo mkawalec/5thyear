@@ -1,4 +1,4 @@
-# Makefile for the molecular dynamics code
+# Makefile for the loops code
 
 #
 # C compiler and options for Intel
@@ -9,33 +9,24 @@
 #
 # C compiler and options for PGI 
 #
-#CC=     pgcc -O3 -mp 
+#CC=     pgcc -O3 -mp
 #LIB=	-lm
 
 #
 # C compiler and options for GNU 
 #
-CC=     gcc -O3 -fopenmp 
+CC=     gcc -O3 -fopenmp
 LIB=	-lm
 
 #
 # Object files
 #
-OBJ=    main.o \
-	dfill.o \
-	domove.o \
-        dscal.o \
-	fcc.o \
-	forces.o \
-	mkekin.o \
-	mxwell.o \
-	prnout.o \
-	velavg.o
+OBJ=    loops.o
 
 #
 # Compile
 #
-md:	$(OBJ)
+loops:   $(OBJ)
 	$(CC) -o $@ $(OBJ) $(LIB)
 
 .c.o:
@@ -45,4 +36,4 @@ md:	$(OBJ)
 # Clean out object files and the executable.
 #
 clean:
-	rm *.o md
+	rm *.o loops

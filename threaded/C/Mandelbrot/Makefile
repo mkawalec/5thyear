@@ -9,14 +9,14 @@
 #
 # C compiler and options for PGI 
 #
-CC=     pgcc -O3 -mp
-LIB=	-lm
+#CC=     pgcc -O3 -mp
+#LIB=	-lm
 
 #
 # C compiler and options for GNU 
 #
-#CC=     gcc -O3 -fopenmp
-#LIB=	-lm
+CC=     gcc -O3 -fopenmp
+LIB=	-lm
 
 #
 # Object files
