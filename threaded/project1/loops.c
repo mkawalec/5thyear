@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 
 
@@ -8,6 +9,7 @@
 
 double a[N][N], b[N][N], c[N];
 int jmax[N];  
+size_t chunksize = 1;
 
 
 void init1(void);
@@ -20,6 +22,13 @@ void valid2(void);
 
 int main(int argc, char *argv[]) 
 { 
+        if (args < 2) {
+                prinft("You need to provide the chunk size after the program name\n");
+                return -1;
+        }
+        char **ptr = NULL;
+        chunksize = strtol(argv[1], ptr, 10);  
+
         double start1,start2,end1,end2;
         int r;
 
@@ -79,7 +88,7 @@ void init2(void){
 void loop1(void) { 
         int i,j; 
 
-#pragma omp parallel for private(i,j)
+#pragma omp parallel for private(i,j) schedule(dynamic, chunksize)
         for (i = 0; i < N; ++i) { 
                 for (j = N - 1; j > i; --j) {
                         a[i][j] += cos(b[i][j]);
@@ -93,7 +102,7 @@ void loop2(void) {
 
         rN2 = 1.0 / (double) (N*N);  
 
-#pragma omp parallel for private(i,j,k) schedule(dynamic, 64)
+#pragma omp parallel for private(i,j,k) schedule(dynamic, chunksize)
         for (i = 0; i < N; ++i) { 
                 for (j = 0; j < jmax[i]; ++j) {
                         for (k = 0; k < j; ++k) { 
