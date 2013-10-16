@@ -23,7 +23,7 @@ void valid2(void);
 int main(int argc, char *argv[]) 
 { 
         if (argc < 2) {
-                prinft("You need to provide the chunk size after the program name\n");
+                printf("You need to provide the chunk size after the program name\n");
                 return -1;
         }
         char **ptr = NULL;
