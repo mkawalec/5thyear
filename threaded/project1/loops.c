@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
         end2 = omp_get_wtime(); 
         valid2(); 
 
-        printf("Total time for %d reps of loop 2 = %f\n",reps, (float)(end2-start2)); 
+        printf("Total time for %d reps of loop 2 = %f\n\n\n",reps, (float)(end2-start2)); 
 } 
 
 void init1(void){
@@ -88,7 +88,7 @@ void init2(void){
 void loop1(void) { 
         int i,j; 
 
-#pragma omp parallel for private(i,j) schedule(dynamic, chunksize)
+#pragma omp parallel for private(i,j) schedule(auto)
         for (i = 0; i < N; ++i) { 
                 for (j = N - 1; j > i; --j) {
                         a[i][j] += cos(b[i][j]);
@@ -102,7 +102,7 @@ void loop2(void) {
 
         rN2 = 1.0 / (double) (N*N);  
 
-#pragma omp parallel for private(i,j,k) schedule(dynamic, chunksize)
+#pragma omp parallel for private(i,j,k) schedule(auto)
         for (i = 0; i < N; ++i) { 
                 for (j = 0; j < jmax[i]; ++j) {
                         for (k = 0; k < j; ++k) { 

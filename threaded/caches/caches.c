@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     size_t ops = 100;
 
     size_t i = 0;
-    for (; ops < amount; ops *= 2) {
+    for (; ops < amount; ops *= 1.1) {
         double start_time = omp_get_wtime();
         double temp = 0.0;
 

@@ -1,4 +1,4 @@
-CC = gcc caches.c -O2 -fopenmp
+CC = gcc caches.c -fopenmp
 LIB = -lm
 
 caches:   $(OBJ)
