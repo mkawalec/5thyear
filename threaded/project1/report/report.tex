@@ -1,0 +1,18 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{color,graphicx}
+\usepackage[margin=2cm]{geometry}
+
+\begin{document}
+\title{First report from Programming Skills}
+\author{Michal Kawalec}
+\maketitle
+
+\section{Introduction}
+A source code for a serial program was downloaded from the LEARN environment. Paralleling this code, while keeping the results correct, was our task. Do achieve that we needed to use the OpenMP library and related compiler directives. Because we are more familiar with C than Fortran, C was an obvious choice of language to select for the project. 
+
+As is the case with most parallel programs, the main challenge and focus was not on the speed (which is important), but on being absolutely sure that the program is correct and does not exhibit any incorrect behaviour when scaling to many processors. The given program was fairly simple, so ensuring the correctness was not a hard task, but it nevertheless required careful examination of usage context for every variable.
+
+After ensuring that the program works correctly our task was to see how different choices of schedulers affect its performance. Different considerations put into this part are best described in the corresponding section later in the report.
+
+\end{document}
