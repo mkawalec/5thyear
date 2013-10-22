@@ -1,6 +1,6 @@
 \documentclass[11pt,a4paper]{article}
 
-\usepackage{color,graphicx}
+\usepackage{color,graphicx,listings}
 \usepackage[margin=2cm]{geometry}
 
 \begin{document}
@@ -9,10 +9,23 @@
 \maketitle
 
 \section{Introduction}
-A source code for a serial program was downloaded from the LEARN environment. Paralleling this code, while keeping the results correct, was our task. Do achieve that we needed to use the OpenMP library and related compiler directives. Because we are more familiar with C than Fortran, C was an obvious choice of language to select for the project. 
+The task of this assignment was to pararellise a serial program code downloaded from the \texttt{LEARN} environment. To achieve that we needed to use the OpenMP library and related compiler directives. Because we are more familiar with C than Fortran, C was an obvious choice of language to select for the project. 
 
-As is the case with most parallel programs, the main challenge and focus was not on the speed (which is important), but on being absolutely sure that the program is correct and does not exhibit any incorrect behaviour when scaling to many processors. The given program was fairly simple, so ensuring the correctness was not a hard task, but it nevertheless required careful examination of usage context for every variable.
+As is the case with most parallel programs, the main challenge and focus was not on the speed (which is important), but on being absolutely sure that the program is correct and does not exhibit any erroneous behaviour when scaling to many processors. The given program was fairly simple, so ensuring the correctness was not a hard task, but it nevertheless required careful examination of usage context for every variable.
 
 After ensuring that the program works correctly our task was to see how different choices of schedulers affect its performance. Different considerations put into this part are best described in the corresponding section later in the report.
+
+\section{Preparation}
+\subsection{Code}
+Sections that needed paralellisation were identified. There were two loops which work needed to be split among many threads and we decided to use one \texttt{omp parallel for} directive for each loop. We noticed that in both sections it was needed to only make the loop indexes private, as it was never the case that multiple threads attempted to write to the same place in memory in shared arrays. Therefore we did not use critical sections when updating variables inside the loops as they would not yield any benefit for program correctness and would introduce considerable locking overhead. Neither of the loops changes values of non-array variables so they were kept shared to make the memory and communication overhead as low as possible. We also decided that we will not use the \texttt{default(none)} clause, even though it has some educational use, as using clear implicit rules that save typing is a good foundation of sound programming practice.
+
+The Unix \texttt{sed} program was used for generating versions of the source code with different schedulers and chunks sizes. Its output was then fed to \texttt{gcc} and compiled with the \texttt{-O3} code optimisation level. Each of the cases to be tested was then executed ten times on \texttt{Morar} using the \texttt{qsub} utility. We decided that executing each of the cases ten times strikes at a balance between the accuracy of determining the time variability for each run and making the usage of the machine inconvenient for other users.
+
+\subsection{Data methodology}
+We were not sure at first if we should use the fastest time for each case as its result, or take the average of the runs and use the standard deviation as a measure of time variability. The first method has a marked advantage, as all of the slower than fastest runs are caused by another process using the communication infrastructure of the processor. On the other hand the potential user is usually interested in `real life' runs of the program and as such a program that is strongly influenced by other programs running alongside it will not be the most useful one, even if it is faster than all the others in the most optimal case. 
+
+Because of that we decided to report the average time for each test case. As it turned out, the standard deviation for all the measurement points was smaller than the point size on the graph, so at the end we decided not to plot it, to keep the plots clear and readable.
+
+\section{Results}
 
 \end{document}
