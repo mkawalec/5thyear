@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 
         // Main loop
         size_t iter;
-        for (iter = 0; iter < 10; ++iter) {
+        for (iter = 0; iter < 1000; ++iter) {
                 size_t i, j;
                 for (i = 1; i < dim_x; ++i) {
                         for (j = 1; j < dim_y; ++j) {
