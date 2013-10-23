@@ -55,7 +55,9 @@ If we look carefully on how the number of iterations is assigned to the loop wit
     \caption{Run times for different schedulers and chunk sizes for the loop 2. For the \texttt{auto} and \texttt{static} without chunk size specified, we observe the execution times of \(99s\) and \(100s\), respectively.}
 \end{figure}
 
-Since the workload change period is 30, we would expect the most efficient scheduler to be one with a chunk size as close to 30 as possible, but that is not what happens. Instead we observe the time for both \texttt{static} and \texttt{dynamic} schedulers to decrease at first, but then drastically increase after the chunk size of 8 and 16 (respectively) is passed. 
+Since the workload change period is 30, we would expect the most efficient scheduler to be one with a chunk size as close to 30 as possible, but that is not what happens. Instead we observe the time for both \texttt{static} and \texttt{dynamic} schedulers to decrease at first, but then drastically increase after the chunk size of 8 and 16 (respectively) is passed. For both schedulers the time taken decreases at first as increasing the chunk size decreases the overhead due to switching between the chunks. Above the chunk size of 8, the static scheduler speed decreases drastically as imbalance in the number of computations in different threads increases drastically - in the worst case of the 1st thread having the first 30 loop iterations the first thread has half of the workload of the whole i loop.
+
+The \texttt{dynamic} scheduler behaviour is a bit more delicate and it seems (since there are only 67 work regions inside the loop range) that all of the gains that are seen from increasing chunk size are due to decreasing communication overhead. They are overtaken at the chunk size of 16 by the workload becoming too imbalanced as at the chunk size of 32 the first thread has half of all the computations.
 
 
 \end{document}
