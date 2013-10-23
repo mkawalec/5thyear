@@ -6,7 +6,7 @@
 \graphicspath{{./img/}}
 
 \begin{document}
-\title{First report from Programming Skills}
+\title{First report from Threaded Programming}
 \author{Michal Kawalec}
 \maketitle
 
@@ -31,31 +31,31 @@ Because of that we decided to report the average time for each test case. As it 
 \section{Results}
 \subsection{Determining the fastest scheduler}
 \subsubsection{First loop}
-At first the parallel version of the code was run with different schedulers and different chunk sizes (when applicable). Each of the runs was repeated ten times to estimate the runtime variability which, as mentioned, turned out to be minimal. As can be seen on Figure~\ref{loop1} different schedulers produce markedly different results, but for the first loop either the \texttt{static} scheduler with chunk size \(\leq 8\) could be used or \texttt{dynamic} with chunk size \(\leq 16\). The times for both \texttt{auto} and \texttt{static} without specified chunksize were the same and equal \(41s\), so they are not considered in the speed contest for the first loop.
+At first the parallel version of the code was run with different schedulers and different chunk sizes (when applicable). Each of the runs was repeated ten times to estimate the runtime variability which, as mentioned, turned out to be minimal. As can be seen on Figure~\ref{loop1} different schedulers produce markedly different results, but for the first loop either the \texttt{static} scheduler with chunk size \(\leq 8\) could be used or \texttt{dynamic} with chunk size \(\leq 16\). The times for both \texttt{auto} and \texttt{static} were too long to be considered in the speed contest for the first loop.
 
 \begin{figure}[h!]
     \begin{center}
         \includegraphics[width=0.8\textwidth]{loop1.png}
     \end{center}
-    \caption{Results from the first loop}
+    \caption{Run times for different schedulers and chunk sizes for the loop 1. The two schedulers without a specified chunk size, \texttt{auto} and \texttt{static} (with no size specified) achieved times of \(0,41s\) respectively.}
     \label{loop1}
 \end{figure}
 
-Looking at the code of the first loop reveals the sources of the behaviour under different schedulers. The loop has most of the work at its beginning, which explains the constant time achieved with the \texttt{dynamic} scheduler and different chunk sizes. It also explains why the \texttt{static} scheduler is working fast with small chunk sizes, but starts to lag behind \texttt{dynamic} for larger ones - as the chunk size grows larger the amount of work in different threads gets more and more unbalanced, thus leading to the threads with less work to wait for the threads which had more work assigned to them.
+Looking at the code of the first loop reveals the sources of behaviour under different schedulers. The loop has most of its work at the beginning, which explains the constant time achieved with the \texttt{dynamic} scheduler and different chunk sizes. It also explains why the \texttt{static} scheduler is working fast with small chunk sizes, but starts to lag behind \texttt{dynamic} for larger ones - as the chunk size grows larger the amount of work in different threads gets more and more unbalanced, thus leading to the threads with less work to wait for the threads which had more work assigned to them. The \texttt{dynamic} scheduler wins for every chunk size, as the flexibility arising from each thread being able to pick up the next outstanding chunk apparently outweighs the communication costs.
 
 \subsection{Second loop}
-The results obtained for the second loop were much more varied. If we look carefully on how the number of iterations is assigned to the first inner loop, we notice that the first 30 iterations of the outer loop get N iterations of the inner loop, in the next 30 only each in four get N iterations (the rest get only one), in the following 30 only one in seven and so on. Therefore the bulk of the computations is again at the beginning of the outermost loop, which again explains the consistent behaviour of the \texttt{guided} scheduler. 
+The results obtained for the second loop were much more varied. We can again readily notice the constant time for the \texttt{guided} scheduler, but there is a strong time minimum for both \texttt{static} and \texttt{dynamic} schedulers.
 
-Since the workload change period is 30, we would expect the most efficient scheduler to be one with a chunk size as close to 30 as possible, but that is not what happens. Instead we observe the time for both \texttt{static} and \texttt{dynamic} schedulers to decrease at first, but then drastically increase after the chunk size of 8 and 16 (respectively) is passed. 
-
-For the \texttt{auto} and \texttt{static} without chunksize we observe the execution times of 99 and 100, respectively.
+If we look carefully on how the number of iterations is assigned to the loop with iterator \textit{j}, we notice that when \textit{i} is less than 30, \textit{j} goes to N for every value of \textit{i}. When \(30 \leq i < 60\), only one in four \textit{j}s is assigned N iterations and the rest gets only one. In the following 30 only one in seven and so on (see line 73 in \texttt{loops.c}). Therefore the bulk of the computations is again at the beginning of the outermost loop, which explains the consistent behaviour of the \texttt{guided} scheduler. 
 
 \begin{figure}[h!]
     \begin{center}
         \includegraphics[width=0.8\textwidth]{loop2.png}
     \end{center}
-    \caption{Results from the second loop}
+    \caption{Run times for different schedulers and chunk sizes for the loop 2. For the \texttt{auto} and \texttt{static} without chunk size specified, we observe the execution times of \(99s\) and \(100s\), respectively.}
 \end{figure}
+
+Since the workload change period is 30, we would expect the most efficient scheduler to be one with a chunk size as close to 30 as possible, but that is not what happens. Instead we observe the time for both \texttt{static} and \texttt{dynamic} schedulers to decrease at first, but then drastically increase after the chunk size of 8 and 16 (respectively) is passed. 
 
 
 \end{document}
