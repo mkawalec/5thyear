@@ -7,41 +7,44 @@
 /** Reads in the file data into a
  *  computation-ready array
  */
-void read_input(float *buf, float *new, size_t dim_x, size_t dim_y)
+void read_input(float *buf, float **new, size_t dim_x, size_t dim_y)
 {
+        printf("Reading input...\n");
         size_t i, j;
-        for (i = 0; i < dim_x + 2; ++i) {
-                for (j = 0; j < dim_y + 2; ++j) {
-                        if (i == 0 || i == dim_x || j == 0 || j == dim_y) {
+        for (i = 0; i < dim_y + 2; ++i) {
+                for (j = 0; j < dim_x + 2; ++j) {
+                        if (i == 0 || i == dim_x + 1 || j == 0 || j == dim_y + 1) {
                                 // Set the padding to 255
-                                new[i + j * (dim_x + 2)] = 255;
+                                new[i][j] = 255;
                         } else {
-                                new[i + j * (dim_x + 2)] = buf[i - 1 + (j -1) * (dim_x + 2)];
+                                new[i][j] = buf[(i - 1) * dim_x + (j - 1)];
                         }
                 }
         }
+        printf("done\n");
 }
 
 /** Set an array to the max value,
  *  including halos
  */
-void initialize_array(float *array, size_t dim_x, size_t dim_y)
+void initialize_array(float **array, size_t dim_x, size_t dim_y)
 {
+        printf("Initializing an array...\n");
         size_t i, j;
-        for (i = 0; i < dim_x + 2; ++i) {
-                for (j = 0; j < dim_y + 2; ++j) {
-                        array[i + j * (dim_x + 2)] = 255;
+        for (i = 0; i < dim_y + 2; ++i) {
+                for (j = 0; j < dim_x + 2; ++j) {
+                        array[i][j] = 255;
                 }
         }
+        printf("done\n");
 }
 
-void write_output(float *buf, float *input, size_t dim_x, size_t dim_y)
+void write_output(float *buf, float **input, size_t dim_x, size_t dim_y)
 {
         size_t i, j;
-        for (i = 1; i < dim_x + 1; ++i) {
-                for (j = 1; j < dim_y + 1; ++j) {
-                        buf[i - 1 + (j - 1) * dim_x] = input[i + j * (dim_x + 2)];
-                }
+        for (i = 1; i < dim_y + 1; ++i) {
+                for (j = 1; j < dim_x + 1; ++j) 
+                        buf[(i - 1) * dim_x + j - 1] = input[i][j];
         }
 
         pgmwrite("output.pgm", buf, dim_x, dim_y);
@@ -65,9 +68,9 @@ int main(int argc, char *argv[])
         size_t dim_y = strtoul(argv[3], char_ptr, 10);
 
         float *buf = malloc(sizeof(float) * dim_x * dim_y);
-        float *edge = malloc(sizeof(float) * (dim_x + 2) * (dim_y + 2));
-        float *new = malloc(sizeof(float) * (dim_x + 2) * (dim_y + 2));
-        float *old = malloc(sizeof(float) * (dim_x + 2) * (dim_y + 2));
+        float **edge = arralloc(sizeof(float), 2, dim_x + 2, dim_y + 2);
+        float **new = arralloc(sizeof(float), 2, dim_x + 2, dim_y + 2);
+        float **old = arralloc(sizeof(float), 2, dim_x + 2, dim_y + 2);
         pgmread(image_name, buf, dim_x, dim_y);
 
         read_input(buf, edge, dim_x, dim_y);
@@ -77,17 +80,14 @@ int main(int argc, char *argv[])
         size_t iter;
         for (iter = 0; iter < 1000; ++iter) {
                 size_t i, j;
-                for (i = 1; i < dim_x; ++i) {
-                        for (j = 1; j < dim_y; ++j) {
-                                new[i + j * (dim_x + 2)] = 0.25 * (
-                                                old[i - 1 + j * (dim_x + 2)] +
-                                                old[i + 1 + j * (dim_x + 2)] +
-                                                old[i + (j - 1) * (dim_x + 2)] +
-                                                old[i + (j + 1) * (dim_x + 2)] -
-                                                edge[i + j * (dim_x + 2)]);
+                for (i = 1; i < dim_y; ++i) {
+                        for (j = 1; j < dim_x; ++j) {
+                                new[i][j] = 0.25 * (old[i-1][j] + old[i+1][j] + 
+                                                old[i][j-1] + old[i][j+1] -
+                                                edge[i][j]);
                         }
                 }
-                float *temp = new;
+                float **temp = new;
                 new = old;
                 old = temp;
         }
