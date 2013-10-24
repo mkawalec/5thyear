@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "pgmio.h"
+#include "arralloc.h"
 
 /** Reads in the file data into a
  *  computation-ready array

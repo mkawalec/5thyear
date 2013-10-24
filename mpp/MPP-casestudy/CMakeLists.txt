@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 project(casestudy)
 include_directories(src include)
-set(HEADER_FILES include/pgmio.h)
+set(HEADER_FILES include/pgmio.h include/arralloc.h)
 
 message(status "${CMAKE_CURRENT_SOURCE_DIR}")
-add_executable(edges src/edges.c src/pgmio.c ${HEADER_FILES})
+add_executable(edges src/edges.c src/pgmio.c src/arralloc.c ${HEADER_FILES})
 target_link_libraries(edges -lm)
 
 if (CMAKE_COMPILER_IS_GNUCXX)
