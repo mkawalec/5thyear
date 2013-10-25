@@ -144,14 +144,13 @@ void runloop(int loopid)  {
 
 #pragma omp barrier
         while (1) {
-            int start, end, thread_id;
+            int start, end;
             omp_set_lock(&chunk_locks[myid]);
             if (chunks[myid].start < chunks[myid].end) {
                 start = chunks[myid].start;
                 end = start + (int)ceil((chunks[myid].end - chunks[myid].start)/
                         (double)nthreads);
                 chunks[myid].start = end;
-                thread_id = myid;
 
                 omp_unset_lock(&chunk_locks[myid]);
             } else if ((steal_from = get_most_loaded(chunks, nthreads)) != -1) {
