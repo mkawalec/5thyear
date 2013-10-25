@@ -15,13 +15,13 @@
 #
 # C compiler and options for GNU 
 #
-CC=     gcc -O3 -fopenmp
+CC=     gcc -O3 -fopenmp -g
 LIB=	-lm
 
 #
 # Object files
 #
-OBJ=    loops.o arralloc.o
+OBJ=    loops.o 
 
 #
 # Compile
