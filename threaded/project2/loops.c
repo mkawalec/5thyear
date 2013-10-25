@@ -169,12 +169,15 @@ void runloop(int loopid)  {
                 break;
             }
 
-            // Since we don't want to put a critical section
-            // on get_most_loaded
+            /* There is a very small chance that in the 'else if' loop
+             * above a chunk to claim was the last one and it was claimed
+             * by another process. In such a case the condition checking would
+             * complete, but start would be set to end, as there are no chunks 
+             * left to process
+             */
             if (start == end) 
                 break;
 
-            //printf("Thread %d starting at %d, ending at %d\n", myid, start, end);
             switch (loopid) { 
                 case 1: loop1chunk(start, end); break;
                 case 2: loop2chunk(start, end); break;
