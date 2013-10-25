@@ -90,27 +90,44 @@ void init2(void){
 
 } 
 
+int get_most_loaded(struct Chunk *chunks, int nthreads)
+{
+    int most_loaded = -1;
+    int difference = 0;
+
+    int i;
+    for (i = 0; i < nthreads; ++i) {
+        if (chunks[i].end - chunks[i].start > difference) {
+            most_loaded = i;
+            difference = chunks[i].end - chunks[i].start;
+        }
+    }
+
+    return most_loaded;
+}
+
 struct Chunk {
     int start, end;
 };
 
 void runloop(int loopid)  {
-    struct Chunk *chunks;
-    omp_lock_t *chunk_locks;
+    int nthreads; 
+#pragma omp parallel
+    {
+#pragma omp single 
+        {
+            nthreads = omp_get_num_threads(); 
+        }
+    }
+            
+    struct Chunk chunks[nthreads];
+    omp_lock_t chunk_locks[nthreads];
 
-
-#pragma omp parallel default(none) shared(loopid, chunks, chunk_locks) 
+#pragma omp parallel default(none) shared(loopid, chunks, chunk_locks, nthreads) 
     {
         int myid  = omp_get_thread_num();
-        int nthreads = omp_get_num_threads(); 
         int ipt = (int) ceil((double)N/(double)nthreads);
         int steal_from;
-
-#pragma omp single
-        {
-            chunks = malloc(sizeof(struct Chunk) * nthreads);
-            chunk_locks = malloc(sizeof(omp_lock_t) * nthreads);
-        }
 
         int lo = myid*ipt;
         int hi = (myid+1)*ipt;
@@ -132,7 +149,7 @@ void runloop(int loopid)  {
                 thread_id = myid;
 
                 omp_unset_lock(&chunk_locks[myid]);
-            } else if ((steal_from = get_most_loaded(chunks, nthreads)) != -1) {
+            } else if ((steal_from = get_most_loaded(&chunks, nthreads)) != -1) {
                 omp_unset_lock(&chunk_locks[myid]);
                 omp_set_lock(&chunk_locks[steal_from]);
                 start = chunks[steal_from].start;
@@ -157,26 +174,6 @@ void runloop(int loopid)  {
             } 
         }
     }
-
-    // Let the memory graze free!
-    free(chunks);
-    free(chunk_locks);
-}
-
-int get_most_loaded(struct Chunk *chunks, int nthreads)
-{
-    int most_loaded = -1;
-    int difference = 0;
-
-    int i;
-    for (i = 0; i < nthreads; ++i) {
-        if (chunks[i].end - chunks[i].start > difference) {
-            most_loaded = i;
-            difference = chunks[i].end - chunks[i].start;
-        }
-    }
-
-    return most_loaded;
 }
 
 void loop1chunk(int lo, int hi) { 
