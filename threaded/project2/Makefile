@@ -21,7 +21,7 @@ LIB=	-lm
 #
 # Object files
 #
-OBJ=    loops.o
+OBJ=    loops.o arralloc.o
 
 #
 # Compile

@@ -6,6 +6,8 @@
 #define reps 100 
 #include <omp.h> 
 
+#include "arralloc.h"
+
 double a[N][N], b[N][N], c[N];
 int jmax[N];  
 
@@ -91,6 +93,7 @@ void init2(void){
 
 
 void runloop(int loopid)  {
+
 
 #pragma omp parallel default(none) shared(loopid) 
   {
