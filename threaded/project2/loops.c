@@ -98,17 +98,6 @@ void runloop(int loopid)  {
     struct Chunk *chunks;
     omp_lock_t *chunk_locks;
 
-#pragma omp parallel
-    {
-#pragma omp single
-        {
-            int nthreads = omp_get_num_threads(); 
-            int ipt = (int) ceil((double)N/(double)nthreads); 
-            chunks = malloc(sizeof(struct Chunk) * nthreads);
-            chunk_locks = malloc(sizeof(omp_lock_t) * nthreads);
-        }
-    }
-
 
 #pragma omp parallel default(none) shared(loopid, chunks, chunk_locks) 
     {
@@ -117,17 +106,21 @@ void runloop(int loopid)  {
         int ipt = (int) ceil((double)N/(double)nthreads);
         int steal_from;
 
+#pragma omp single
+        {
+            chunks = malloc(sizeof(struct Chunk) * nthreads);
+            chunk_locks = malloc(sizeof(omp_lock_t) * nthreads);
+        }
+
         int lo = myid*ipt;
         int hi = (myid+1)*ipt;
         if (hi > N) hi = N; 
 
         // Initialize the chunk sizes for all threads
-        omp_set_lock(&chunk_locks[myid]);
         chunks[myid].start = lo;
         chunks[myid].end = hi;
-        omp_unset_lock(&chunk_locks[myid]);
 
-
+#pragma omp barrier
         while (1) {
             int start, end, thread_id;
             omp_set_lock(&chunk_locks[myid]);
@@ -157,7 +150,7 @@ void runloop(int loopid)  {
             // on get_most_loaded
             if (start == end) 
                 break;
-            
+
             switch (loopid) { 
                 case 1: loop1chunk(start, end); break;
                 case 2: loop2chunk(start, end); break;
