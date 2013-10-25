@@ -14,10 +14,9 @@ void read_input(float *buf, float **new, size_t dim_x, size_t dim_y)
         for (i = 0; i < dim_y + 2; ++i) {
                 for (j = 0; j < dim_x + 2; ++j) {
                         if (i == 0 || i == dim_x + 1 || j == 0 || j == dim_y + 1) {
-                                // Set the padding to 255
                                 new[i][j] = 255;
                         } else {
-                                new[i][j] = buf[(i - 1) * dim_x + (j - 1)];
+                                new[i][j] = buf[(j - 1) + dim_x * (i - 1)];
                         }
                 }
         }
@@ -42,9 +41,9 @@ void initialize_array(float **array, size_t dim_x, size_t dim_y)
 void write_output(float *buf, float **input, size_t dim_x, size_t dim_y)
 {
         size_t i, j;
-        for (i = 1; i < dim_y + 1; ++i) {
-                for (j = 1; j < dim_x + 1; ++j) 
-                        buf[(i - 1) * dim_x + j - 1] = input[i][j];
+        for (i = 0; i < dim_y; ++i) {
+                for (j = 0; j < dim_x; ++j) 
+                        buf[j + dim_x * i] = input[i+1][j+1];
         }
 
         pgmwrite("output.pgm", buf, dim_x, dim_y);
@@ -72,8 +71,11 @@ int main(int argc, char *argv[])
         float **new = arralloc(sizeof(float), 2, dim_x + 2, dim_y + 2);
         float **old = arralloc(sizeof(float), 2, dim_x + 2, dim_y + 2);
         pgmread(image_name, buf, dim_x, dim_y);
+        pgmwrite("output_test.pgm", buf, dim_x, dim_y);
 
         read_input(buf, edge, dim_x, dim_y);
+        write_output(buf, edge, dim_x, dim_y);
+        return 0;
         initialize_array(old, dim_x, dim_y);
 
         // Main loop
