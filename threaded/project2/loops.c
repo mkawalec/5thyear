@@ -120,8 +120,10 @@ void runloop(int loopid)  {
         }
     }
             
-    // Allocating the variables on the stack, as there is
-    // no need to push the to the heap
+    /* Allocating the variables on the stack, as there is
+     * no need to push them the to the heap with such short
+     * lifetime
+     */
     struct Chunk chunks[nthreads];
     omp_lock_t chunk_locks[nthreads];
     size_t i;
