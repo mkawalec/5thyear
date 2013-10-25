@@ -94,6 +94,22 @@ struct Chunk {
     int start, end;
 };
 
+int get_most_loaded(struct Chunk *chunks, int nthreads)
+{
+    int most_loaded = -1;
+    int difference = 0;
+
+    int i;
+    for (i = 0; i < nthreads; ++i) {
+        if (chunks[i].end - chunks[i].start > difference) {
+            most_loaded = i;
+            difference = chunks[i].end - chunks[i].start;
+        }
+    }
+
+    return most_loaded;
+}
+
 void runloop(int loopid)  {
     struct Chunk *chunks;
     omp_lock_t *chunk_locks;
@@ -161,22 +177,6 @@ void runloop(int loopid)  {
     // Let the memory graze free!
     free(chunks);
     free(chunk_locks);
-}
-
-int get_most_loaded(struct Chunk *chunks, int nthreads)
-{
-    int most_loaded = -1;
-    int difference = 0;
-
-    int i;
-    for (i = 0; i < nthreads; ++i) {
-        if (chunks[i].end - chunks[i].start > difference) {
-            most_loaded = i;
-            difference = chunks[i].end - chunks[i].start;
-        }
-    }
-
-    return most_loaded;
 }
 
 void loop1chunk(int lo, int hi) { 
