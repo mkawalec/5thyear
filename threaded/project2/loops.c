@@ -90,22 +90,6 @@ void init2(void){
 
 } 
 
-int get_most_loaded(struct Chunk *chunks, int nthreads)
-{
-    int most_loaded = -1;
-    int difference = 0;
-
-    int i;
-    for (i = 0; i < nthreads; ++i) {
-        if (chunks[i].end - chunks[i].start > difference) {
-            most_loaded = i;
-            difference = chunks[i].end - chunks[i].start;
-        }
-    }
-
-    return most_loaded;
-}
-
 struct Chunk {
     int start, end;
 };
@@ -136,8 +120,13 @@ void runloop(int loopid)  {
         }
     }
             
+    // Allocating the variables on the stack, as there is
+    // no need to push the to the heap
     struct Chunk chunks[nthreads];
     omp_lock_t chunk_locks[nthreads];
+    size_t i;
+    for (i = 0; i < nthreads; ++i)
+        omp_init_lock(&chunk_locks[i]);
 
 #pragma omp parallel default(none) shared(loopid, chunks, chunk_locks, nthreads) 
     {
@@ -165,9 +154,10 @@ void runloop(int loopid)  {
                 thread_id = myid;
 
                 omp_unset_lock(&chunk_locks[myid]);
-            } else if ((steal_from = get_most_loaded(&chunks, nthreads)) != -1) {
+            } else if ((steal_from = get_most_loaded(chunks, nthreads)) != -1) {
                 omp_unset_lock(&chunk_locks[myid]);
                 omp_set_lock(&chunk_locks[steal_from]);
+
                 start = chunks[steal_from].start;
                 end = start + (int)ceil((chunks[steal_from].end - chunks[steal_from].start)/
                         (double)nthreads);
@@ -184,6 +174,7 @@ void runloop(int loopid)  {
             if (start == end) 
                 break;
 
+            //printf("Thread %d starting at %d, ending at %d\n", myid, start, end);
             switch (loopid) { 
                 case 1: loop1chunk(start, end); break;
                 case 2: loop2chunk(start, end); break;
@@ -202,8 +193,6 @@ void loop1chunk(int lo, int hi) {
     }
 
 } 
-
-
 
 void loop2chunk(int lo, int hi) {
     int i,j,k; 
@@ -234,7 +223,6 @@ void valid1(void) {
     printf("Loop 1 check: Sum of a is %lf\n", suma);
 
 } 
-
 
 void valid2(void) { 
     int i; 
