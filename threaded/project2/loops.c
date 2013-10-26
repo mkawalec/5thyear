@@ -134,13 +134,22 @@ void runloop(int loopid)  {
     {
         int myid  = omp_get_thread_num();
         int ipt = (int) ceil((double)N/(double)nthreads);
+        /* The id of a process which chunk will be executed, if
+         * the current process had finished its own chunks
+         */
         int steal_from;
 
         int lo = myid*ipt;
         int hi = (myid+1)*ipt;
         if (hi > N) hi = N; 
 
-        // Initialize the chunk sizes for all threads
+        /* Initialize the chunk sizes for all threads.
+         * No locking is required, as each thread writes to a 
+         * different part of the chunks array and the barrier ensures
+         * that the threads will start computations only after
+         * every thread has set its own computation region
+         * boundaries.
+         */
         chunks[myid].start = lo;
         chunks[myid].end = hi;
 
