@@ -1,0 +1,17 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{color,graphicx,listings,wrapfig}
+\usepackage[margin=2cm]{geometry}
+
+\graphicspath{{./img/}}
+
+\begin{document}
+\title{Second report from Threaded Programming}
+\author{c02f-32d66e}
+\maketitle
+
+\section{Introduction}
+\texttt{OpenMP} provides four basic schedulers that help parallel programs achieve the best performance. However, all of the schedulers are simple and thus work optimally only in certain simple scenarios. As we show in the first report the scheduler offering the best performance in all but the most simple cases is \texttt{dynamic}. While it is beneficial to use it, one might ask if it is possible to create another scheduler that would scale more efficiently with increasing (but moderate) number of processors. We show that it is indeed possible.
+
+An implementation is presented in this report along with a detailed argument for its correctness and some discussion of reasons for the observed performance. The performance of this new scheduler, called \texttt{affinity} scheduler, is compared with the best scheduler for the same code determined in the first report. A brief comparison between different compilers is made and certain avenues for improvement are briefly suggested, but not investigated in depth.
+\end{document}
