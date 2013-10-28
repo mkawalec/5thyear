@@ -111,6 +111,10 @@ int get_most_loaded(struct Chunk *chunks, int nthreads)
 }
 
 void runloop(int loopid)  {
+    /* The total number of threads is acquired in this slightly odd 
+     * way, as we want to allocate the later structures on the stack
+     * and in a scope accessble to all threads
+     */
     int nthreads; 
 #pragma omp parallel
     {
@@ -120,28 +124,30 @@ void runloop(int loopid)  {
         }
     }
             
-    /* Allocating the variables on the stack, as there is
-     * no need to push them the to the heap with such short
-     * lifetime
+    /* Creating the 'ranges left to be computed'
+     * array, array of locks guarding access and 
+     * initializing the locks.
      */
     struct Chunk chunks[nthreads];
     omp_lock_t chunk_locks[nthreads];
     size_t i;
-    for (i = 0; i < nthreads; ++i)
-        omp_init_lock(&chunk_locks[i]);
+    for (i = 0; i < nthreads; ++i) omp_init_lock(&chunk_locks[i]);
 
 #pragma omp parallel default(none) shared(loopid, chunks, chunk_locks, nthreads) 
     {
         int myid  = omp_get_thread_num();
         int ipt = (int) ceil((double)N/(double)nthreads);
+
+        // Setting the upper and lower computation boundaries 
+        // for this thread.
+        int lo = myid*ipt;
+        int hi = (myid+1)*ipt;
+        if (hi > N) hi = N; 
+
         /* The id of a process which chunk will be executed, if
          * the current process had finished its own chunks
          */
         int steal_from;
-
-        int lo = myid*ipt;
-        int hi = (myid+1)*ipt;
-        if (hi > N) hi = N; 
 
         /* Initialize the chunk sizes for all threads.
          * No locking is required, as each thread writes to a 
@@ -182,11 +188,13 @@ void runloop(int loopid)  {
             /* There is a very small chance that in the 'else if' loop
              * above a chunk to claim was the last one and it was claimed
              * by another process. In such a case the condition checking would
-             * complete, but start would be set to end, as there are no chunks 
-             * left to process
+             * complete, but start would be set to end, as there are no iterations
+             * left to process in this process. There are most probably more 
+             * iterations in other threads, so the iteration-claiming process
+             * above should repeat.
              */
             if (start == end) 
-                break;
+                continue;
 
             switch (loopid) { 
                 case 1: loop1chunk(start, end); break;
