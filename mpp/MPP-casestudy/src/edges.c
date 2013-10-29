@@ -11,12 +11,12 @@ void read_input(float *buf, float **new, size_t dim_x, size_t dim_y)
 {
         printf("Reading input...\n");
         size_t i, j;
-        for (i = 0; i < dim_y + 2; ++i) {
-                for (j = 0; j < dim_x + 2; ++j) {
+        for (i = 0; i < dim_x + 2; ++i) {
+                for (j = 0; j < dim_y + 2; ++j) {
                         if (i == 0 || i == dim_x + 1 || j == 0 || j == dim_y + 1) {
                                 new[i][j] = 255;
                         } else {
-                                new[i][j] = buf[(j - 1) + dim_x * (i - 1)];
+                                new[i][j] = buf[(i - 1) * dim_y + (j - 1)];
                         }
                 }
         }
@@ -30,8 +30,8 @@ void initialize_array(float **array, size_t dim_x, size_t dim_y)
 {
         printf("Initializing an array...\n");
         size_t i, j;
-        for (i = 0; i < dim_y + 2; ++i) {
-                for (j = 0; j < dim_x + 2; ++j) {
+        for (i = 0; i < dim_x + 2; ++i) {
+                for (j = 0; j < dim_y + 2; ++j) {
                         array[i][j] = 255;
                 }
         }
@@ -41,9 +41,9 @@ void initialize_array(float **array, size_t dim_x, size_t dim_y)
 void write_output(float *buf, float **input, size_t dim_x, size_t dim_y)
 {
         size_t i, j;
-        for (i = 0; i < dim_y; ++i) {
-                for (j = 0; j < dim_x; ++j) 
-                        buf[j + dim_x * i] = input[i+1][j+1];
+        for (i = 0; i < dim_x; ++i) {
+                for (j = 0; j < dim_y; ++j) 
+                        buf[i * dim_y + j] = input[i+1][j+1];
         }
 
         pgmwrite("output.pgm", buf, dim_x, dim_y);
@@ -71,27 +71,26 @@ int main(int argc, char *argv[])
         float **new = arralloc(sizeof(float), 2, dim_x + 2, dim_y + 2);
         float **old = arralloc(sizeof(float), 2, dim_x + 2, dim_y + 2);
         pgmread(image_name, buf, dim_x, dim_y);
-        pgmwrite("output_test.pgm", buf, dim_x, dim_y);
 
         read_input(buf, edge, dim_x, dim_y);
-        write_output(buf, edge, dim_x, dim_y);
-        return 0;
         initialize_array(old, dim_x, dim_y);
 
         // Main loop
         size_t iter;
-        for (iter = 0; iter < 1000; ++iter) {
+        for (iter = 0; iter < 100000; ++iter) {
                 size_t i, j;
-                for (i = 1; i < dim_y; ++i) {
-                        for (j = 1; j < dim_x; ++j) {
+                for (i = 1; i < dim_x + 1; ++i) {
+                        for (j = 1; j < dim_y + 1; ++j) {
                                 new[i][j] = 0.25 * (old[i-1][j] + old[i+1][j] + 
                                                 old[i][j-1] + old[i][j+1] -
                                                 edge[i][j]);
                         }
                 }
-                float **temp = new;
-                new = old;
-                old = temp;
+                for (i = 1; i < dim_x + 1; ++i) {
+                    for (j = 1; j < dim_y + 1; ++j) {
+                        old[i][j] = new[i][j];
+                    }
+                }
         }
 
         write_output(buf, old, dim_x, dim_y);
