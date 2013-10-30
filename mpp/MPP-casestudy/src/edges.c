@@ -63,6 +63,12 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &process_count);
 
+    int dims[1] = {process_count};
+    int periods[1] = {0};
+    MPI_Comm proc_topology;
+    MPI_Cart_create(MPI_COMM_WORLD, 
+            1, &(dims[0]), &(periods[0]), 1, &proc_topology);
+
     size_t new_dim_x = dim_x / process_count;
     float *buf = malloc(sizeof(float) * new_dim_x * dim_y);
     float *masterbuf = malloc(sizeof(float) * dim_x * dim_y);
@@ -78,12 +84,24 @@ int main(int argc, char *argv[])
 
     read_input(buf, edge, new_dim_x, dim_y);
     initialize_array(old, new_dim_x, dim_y);
-    printf("%d\n", rank);
+
+    int left_rank, right_rank;
+    MPI_Cart_shift(proc_topology, 0, 1, &left_rank, &right_rank);
 
     // Main loop
-    size_t iter;
-    for (iter = 0; iter < 1000; ++iter) {
-        size_t i, j;
+    size_t iter, i, j;
+    for (iter = 0; iter < 10000; ++iter) {
+        // Sync the halos
+        MPI_Ssend(&(old[new_dim_x + 1][0]), dim_y, MPI_FLOAT,
+                right_rank, 0, proc_topology);
+        MPI_Recv(&(old[0][0]), dim_y, MPI_FLOAT,
+                left_rank, 0, proc_topology, NULL);
+        MPI_Ssend(&(old[0][0]), dim_y, MPI_FLOAT,
+                left_rank, 0, proc_topology);
+        MPI_Recv(&(old[new_dim_x + 1][0]), dim_y, MPI_FLOAT,
+                right_rank, 0, proc_topology, NULL);
+
+
         for (i = 1; i < new_dim_x + 1; ++i) {
             for (j = 1; j < dim_y + 1; ++j) {
                 new[i][j] = 0.25 * (old[i-1][j] + old[i+1][j] + 
@@ -98,7 +116,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    size_t i, j;
     for (i = 0; i < new_dim_x; ++i) {
         for (j = 0; j < dim_y; ++j) 
             buf[i * dim_y + j] = old[i+1][j+1];
