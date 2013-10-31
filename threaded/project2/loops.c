@@ -128,18 +128,15 @@ void runloop(int loopid)  {
      * array, array of locks guarding access and 
      * initializing the locks.
      */
-    struct Chunk *chunks[nthreads];
-    omp_lock_t *chunk_locks[nthreads];
+    struct Chunk chunks[nthreads];
+    omp_lock_t chunk_locks[nthreads];
+    size_t i;
+    for (i = 0; i < nthreads; ++i) omp_init_lock(&chunk_locks[i]);
 
 #pragma omp parallel default(none) shared(loopid, chunks, chunk_locks, nthreads) 
     {
         int myid  = omp_get_thread_num();
         int ipt = (int) ceil((double)N/(double)nthreads);
-
-        // Allocate the chunks and locks
-        chunks[myid] = malloc(sizeof(struct Chunk));
-        chunk_locks[myid] = malloc(sizeof(omp_lock_t));
-        omp_init_lock(chunk_locks[myid]);
 
         // Setting the upper and lower computation boundaries 
         // for this thread.
@@ -159,33 +156,33 @@ void runloop(int loopid)  {
          * every thread has set its own computation region
          * boundaries.
          */
-        (*chunks[myid]).start = lo;
-        (*chunks[myid]).end = hi;
+        chunks[myid].start = lo;
+        chunks[myid].end = hi;
 
 #pragma omp barrier
         while (1) {
             int start, end;
-            omp_set_lock(chunk_locks[myid]);
-            if ((*chunks[myid]).start < (*chunks[myid]).end) {
-                start = (*chunks[myid]).start;
-                end = start + (int)ceil(((*chunks[myid]).end - (*chunks[myid]).start)/
+            omp_set_lock(&chunk_locks[myid]);
+            if (chunks[myid].start < chunks[myid].end) {
+                start = chunks[myid].start;
+                end = start + (int)ceil((chunks[myid].end - chunks[myid].start)/
                         (double)nthreads);
-                (*chunks[myid]).start = end;
+                chunks[myid].start = end;
 
-                omp_unset_lock(chunk_locks[myid]);
-            } else if ((steal_from = get_most_loaded(*chunks, nthreads)) != -1) {
-                omp_unset_lock(chunk_locks[myid]);
-                omp_set_lock(chunk_locks[steal_from]);
+                omp_unset_lock(&chunk_locks[myid]);
+            } else if ((steal_from = get_most_loaded(chunks, nthreads)) != -1) {
+                omp_unset_lock(&chunk_locks[myid]);
+                omp_set_lock(&chunk_locks[steal_from]);
 
-                start = (*chunks[steal_from]).start;
-                end = start + (int)ceil(((*chunks[steal_from]).end - (*chunks[steal_from]).start)/
+                start = chunks[steal_from].start;
+                end = start + (int)ceil((chunks[steal_from].end - chunks[steal_from].start)/
                         (double)nthreads);
-                (*chunks[steal_from]).start = end;
+                chunks[steal_from].start = end;
 
-                omp_unset_lock(chunk_locks[steal_from]);
+                omp_unset_lock(&chunk_locks[steal_from]);
             } else {
-                omp_unset_lock(chunk_locks[myid]);
-                break;
+                omp_unset_lock(&chunk_locks[myid]);
+                breaka
             }
 
             /* There is a very small chance that in the 'else if' loop
@@ -204,10 +201,6 @@ void runloop(int loopid)  {
                 case 2: loop2chunk(start, end); break;
             } 
         }
-
-        // Free the chunks and chunk locks memory
-        free(chunks[myid]);
-        free(chunk_locks[myid]);
     }
 }
 
