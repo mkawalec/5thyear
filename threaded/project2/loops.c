@@ -204,6 +204,10 @@ void runloop(int loopid)  {
                 case 2: loop2chunk(start, end); break;
             } 
         }
+
+        // Free the chunks and chunk locks memory
+        free(chunks[myid]);
+        free(chunk_locks[myid]);
     }
 }
 
