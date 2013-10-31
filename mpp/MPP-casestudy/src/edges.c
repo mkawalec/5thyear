@@ -68,6 +68,7 @@ int main(int argc, char *argv[])
     MPI_Comm proc_topology;
     MPI_Cart_create(MPI_COMM_WORLD, 
             1, &(dims[0]), &(periods[0]), 1, &proc_topology);
+    MPI_Comm_rank(proc_topology, &rank);
 
     size_t new_dim_x = dim_x / process_count;
     float *buf = malloc(sizeof(float) * new_dim_x * dim_y);
@@ -92,11 +93,11 @@ int main(int argc, char *argv[])
     size_t iter, i, j;
     for (iter = 0; iter < 10000; ++iter) {
         // Sync the halos
-        MPI_Ssend(&(old[new_dim_x + 1][0]), dim_y, MPI_FLOAT,
+        MPI_Ssend(&(old[new_dim_x][0]), dim_y, MPI_FLOAT,
                 right_rank, 0, proc_topology);
         MPI_Recv(&(old[0][0]), dim_y, MPI_FLOAT,
                 left_rank, 0, proc_topology, NULL);
-        MPI_Ssend(&(old[0][0]), dim_y, MPI_FLOAT,
+        MPI_Ssend(&(old[1][0]), dim_y, MPI_FLOAT,
                 left_rank, 0, proc_topology);
         MPI_Recv(&(old[new_dim_x + 1][0]), dim_y, MPI_FLOAT,
                 right_rank, 0, proc_topology, NULL);
