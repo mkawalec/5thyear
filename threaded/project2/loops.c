@@ -182,7 +182,7 @@ void runloop(int loopid)  {
                 omp_unset_lock(&chunk_locks[steal_from]);
             } else {
                 omp_unset_lock(&chunk_locks[myid]);
-                breaka
+                break;
             }
 
             /* There is a very small chance that in the 'else if' loop
