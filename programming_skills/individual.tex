@@ -30,6 +30,10 @@ The same reasoning made me push for using an options parser from Boost. It is ea
 
 We decided to use Mersenne-Twister as a random number generator as it provides much better statistics than the standard linear congruential bit included in C++ libraries\footnote{For a longer discussion about the merits of MT, see \url{http://en.wikipedia.org/wiki/Mersenne_twister##Advantages}}. MT generator is actually included in gcc 4.8 as it is a part of C++11 spec we are using in code, but as we decided to support gcc 4.6 we use the Boost implementation.
 
+\subsubsection{Debugging and profiling}
+
+As I was previously familiar with \texttt{Valgrind} set of tools I proposed using them for code profiling and debugging. We used \texttt{callgrind} tool for function cycle estimation, which helped us make more efficient use of the processor by increasing the default number of iterations between output frames. \texttt{memcheck} tool has proven invaluable in pointing us to the sources of memory leaks we had\footnote{We had one small memory leak, which was fixed with information from \texttt{memcheck}.}. My previous knowledge of the tools had helped the team use them efficiently and correctly.
+
 \subsection{Ideas related to code structure}\label{ideas}
 Apart from setting up the build environment and picking libraries we ended up using I also created a project scaffold, ie\  the header files and basic data structures found in \texttt{exceptions.cpp} and \texttt{helpers.cpp}. Having this basis set up, we were able to assign the actual implementation of individual functions between us and work in parallel. 
 
@@ -75,6 +79,8 @@ We also managed to evenly spread workload through the allotted time, using the f
 \end{tabular}
 
 \section{Conclusion}
+It was a very educational group project that made us all work better together. It helped me refresh my knowledge of C++ and discover new build tools and libraries like \texttt{cmake} or \texttt{boost}. I am very happy with the group I worked with and I think that we worked so efficiently because of the division of labour scheme we employed.
 
+I believe that the tools we used, that include \texttt{git}, \texttt{GitHub}, \texttt{cmake}, \texttt{valgrind} and \texttt{boost} were the right tools for the job and increased our productivity while abstracting away commonly written parts of the code, such as the input parameters parser.
 
 \end{document}
