@@ -20,17 +20,61 @@ Even though the Simulation itself is a rather simple piece of software we engine
 
 I took a lead role in the project, being a Benevolent Dictator\footnote{For explanation of this commonly used phrase in Free software, see \url{http://en.wikipedia.org/wiki/Benevolent_Dictator_for_Life}} for the project duration. I decided on the tools we are going to use for project management and suggested the libraries we chose to provide some of the functionality.
 
+\subsection{Choice of tools and libaries}
+
 I suggested \texttt{git} for source management, as it is much more widely supported than the alternatives providing similar functionality (most notably \texttt{Mercurial} and \texttt{Bazaar}). I think that the inherent drawbacks of centralized source management which include a single point of failure, complex privilege management and the requirement to be online when committing changes make it difficult to defend using centralized repositories for modern software projects. 
 
 The lowest version of \texttt{gcc} on our systems was 4.6, so I proposed using the parts of C++11 standard implemented in this version where applicable and supplement the needed missing functionality with Boost libraries. 
 The functionality provided by Boost is the test framework, program arguments parser and Mersenne-Twister random number generator. I thought that since we need only basic unit testing functionality, using unit testing framework which is a part of the same package as other libraries we use has a marked advantage. First of all, Boost is widely used and thus easily available on multiple platforms. Secondly it is written in one style and presents a uniform interface throughout its parts, which reduces occurrence of common errors. 
-The same reasoning made me push for using an options parser from Boost. It is easy to use, implements the 'do not repeat yourself' principle and Boost source code is full of examples of using it in various scenarios. 
+The same reasoning made me push for using an options parser from Boost. It is easy to use, implements the `do not repeat yourself' principle and Boost source code is full of examples of using it in various scenarios. 
 
-We decided to use Mersenne-Twister as a random number generator as it provides much better statistics than the standard linear congruential bit included in C++ libraries\footnote{For a longer discussion about the merits of MT, see \url{http://en.wikipedia.org/wiki/Mersenne_twister#Advantages}}. MT generator is actually included in gcc 4.8 as it is a part of C++11 spec we are using in code, but as we decided to support gcc 4.6 we use the Boost implementation.
+We decided to use Mersenne-Twister as a random number generator as it provides much better statistics than the standard linear congruential bit included in C++ libraries\footnote{For a longer discussion about the merits of MT, see \url{http://en.wikipedia.org/wiki/Mersenne_twister##Advantages}}. MT generator is actually included in gcc 4.8 as it is a part of C++11 spec we are using in code, but as we decided to support gcc 4.6 we use the Boost implementation.
 
-Apart from setting up the build environment and picking libraries we ended up using I also created a project scaffold, ie. the header files and basic data structures found in \texttt{exceptions.cpp} and \texttt{helpers.cpp}. Having this basis set up, we were able to assign the actual implementation of individual functions between us and work in parallel. 
+\subsection{Ideas related to code structure}\label{ideas}
+Apart from setting up the build environment and picking libraries we ended up using I also created a project scaffold, ie\  the header files and basic data structures found in \texttt{exceptions.cpp} and \texttt{helpers.cpp}. Having this basis set up, we were able to assign the actual implementation of individual functions between us and work in parallel. 
 
 I also came up with the idea to dynamically select a used Serializer class at runtime and the actual implementation of this feature. It is a commonly found pattern in object-oriented languages in which a group of classes act as plug-ins and they register themselves during their instantiation in some object that is guaranteed to exist throughout the lifetime of the program. 
 
-Such an approach has multiple advantages. First of all the computation is completely independent on the serialization method chosen. Secondly, 
+Such an approach has multiple advantages. First of all the Simulator class, that does the computation, doesn't have to know about implemented serializers. This enforces the principle of separation of concerns almost automatically, makes the code of each of the classes simpler and more focused on their core functionality. It also makes code development faster as adding a new serializer does not require to changing the Simulator class in any way.
+
+The only disadvantage of this approach I can see is its biggest advantage at the same time. Because the class handling a request to serialize is determined at runtime it is not possible for the compiler to check if a \texttt{serialize} function in a class inheriting from \texttt{Serializer} is called properly. That is why it is so important to keep the same function arguments at all times, even tough it would seem in the sort run that providing only the needed arguments to the \texttt{serialize} function could be useful.
+
+\subsection{Code review}
+We agreed that it would be most useful, given my substantial experience in both commercial and academic software development, to make it my responsibility to review the code before it can be marked as stable and used by other people. Even though it created a single point of failure, that it me, it greatly helped us unify code style, find obvious mistakes and point out avenues for improvement. The work flow we employed required that when writing part of code a ticket on a Trello\footnote{It is available on \url{https://trello.com/b/KRhBGiUB/pumas}} board would be created in `doing' category. After finishing the part the ticket would be moved into `review' board and then I would look through the code, apply my changed and move the ticket to `done'. Only I had the ability to move any ticket to `done' category.
+
+\section{What I've learned}
+The biggest challenge to me was refreshing my C++ knowledge, as I haven't used the language for two years. It took some time getting used to the way object orientation is implemented in C++. I understand the fine difference between virtual and pure virtual functions. I perfected my knowledge of templates. I feel at ease with using dynamic class dispatch through polymorphism, described in Section~\ref{ideas}.
+
+Probably the biggest challenge was forcing \texttt{cmake} to generate proper makefiles. The biggest problems I face here were related to having Boost linked properly. The sparse and at places incomplete documentation provided by \texttt{cmake} developers didn't make the job easy, but I have finally arrived at a solution that works and is correct.
+
+I think that every opportunity to work with others provides us with new insights helping us work better and more efficiently in a group setting. It is quite hard to quantify this experience as it is a sum of small parts, but I am sure that this experience has made me a better team worker.
+
+\section{How we worked together}
+Working in this team was probably the best teamwork experience I have ever had. Biggest part in this was played by the fact that each of us had a unique set of skills that fit together with the skills of others to create a well working machine. I have experience leading teams of programmers and overseeing the work, Claude and Ewan are good at writing clear programs and Diamantis is mathematically inclined.
+
+We were also able to efficiently listen to the arguments of others choosing the most efficient solution to every problem by not being overly attached to our own ideas. 
+A good example of that is when we were discussing a method of dealing with halo cells. 
+I proposed using \texttt{get\_cell} approach\footnote{Described in more detail the group report} that both saved memory and made it trivial to modify the boundary conditions\footnote{Making the boundary conditions cyclic would only require inheriting from Simulator and overloading \texttt{get\_cell} with a different modulo factor.}. 
+Other members were more inclined to use bigger arrays and put halo cells on the sides, but we managed to easily agree on the merits of my solution. 
+
+We also managed to evenly spread workload through the allotted time, using the first three weeks for writing, testing and profiling the code and then introducing a feature freeze and proceeding with writing the report. This enabled us focus on writing the report and being sure that the code will not change and we will not need to amend what we have written to accommodate these changes. It also gave us the peace of mind to focus just on report and not do everything in the last moment.
+
+\subsection{Measure of performance}
+\begin{tabular}{|l||c|c|c|c|c|}
+    \hline
+    Name & Exceptional & Above average & OK & Below Average & Poor \\
+    \hline \hline
+    Michal Kawalec (Me)& X & & & & \\
+    \hline
+    Ewen Gillies & X & & & & \\
+    \hline 
+    Claude Schmit & X & & & & \\ 
+    \hline
+    Diamantis Dakaris & X & & & & \\
+    \hline
+\end{tabular}
+
+\section{Conclusion}
+
+
 \end{document}
