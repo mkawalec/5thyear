@@ -9,6 +9,8 @@
  *  computation-ready array
  */
 
+#define BUFFSIZE 100000
+
 int process_count = 2;
 
 void read_input(float *buf, float **new, size_t dim_x, size_t dim_y)
@@ -47,9 +49,16 @@ int main(int argc, char *argv[])
     /** The image filename is provided as the first
      *  parameter to the program.
      */
+    int rank;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &process_count);
+
     if (argc < 4) {
-        printf("This program is run as follows: %s image_name dim_x dim_y",
+        if (rank == 0) 
+            printf("This program is run as follows: %s image_name dim_x dim_y\n\n",
                 argv[0]);
+        MPI_Finalize();
         return -1;
     }
     // Parsing the command line parameters
@@ -57,11 +66,8 @@ int main(int argc, char *argv[])
     char *image_name = argv[1];
     size_t dim_x = strtoul(argv[2], char_ptr, 10);
     size_t dim_y = strtoul(argv[3], char_ptr, 10);
-    int rank;
 
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &process_count);
+    MPI_Buffer_attach(malloc(BUFFSIZE), BUFFSIZE);
 
     int dims[1] = {process_count};
     int periods[1] = {0};
@@ -93,12 +99,15 @@ int main(int argc, char *argv[])
     size_t iter, i, j;
     for (iter = 0; iter < 10000; ++iter) {
         // Sync the halos
-        MPI_Ssend(&(old[new_dim_x][0]), dim_y, MPI_FLOAT,
-                right_rank, 0, proc_topology);
+        MPI_Request right_req, left_req;
+
+        MPI_Ibsend(&(old[new_dim_x][0]), dim_y, MPI_FLOAT,
+                right_rank, 0, proc_topology, &right_req);
+        MPI_Ibsend(&(old[1][0]), dim_y, MPI_FLOAT,
+                left_rank, 0, proc_topology, &right_req);
+
         MPI_Recv(&(old[0][0]), dim_y, MPI_FLOAT,
                 left_rank, 0, proc_topology, NULL);
-        MPI_Ssend(&(old[1][0]), dim_y, MPI_FLOAT,
-                left_rank, 0, proc_topology);
         MPI_Recv(&(old[new_dim_x + 1][0]), dim_y, MPI_FLOAT,
                 right_rank, 0, proc_topology, NULL);
 
