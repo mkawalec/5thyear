@@ -14,8 +14,11 @@ void get_pos(int rank, size_t dim_x, size_t dim_y, size_t part_x, size_t part_y,
         size_t *start_x, size_t *start_y, size_t *end_x, size_t *end_y);
 MPI_Datatype create_dtype(int rank, size_t dim_x, size_t dim_y, 
         size_t size_x, size_t size_y);
+
 void my_scatter(float *input, size_t dim_x, size_t dim_y, MPI_Comm communicator,
-                float *receive_buf, size_t *receive_x, size_t *receive_y);
+                float **receive_buf, size_t *receive_x, size_t *receive_y);
+void my_gather(float *input, size_t input_size, MPI_Comm communicator,
+               float *receive_buf, size_t receive_x, size_t receive_y);
 
 struct pair get_decomposition(size_t dim_x, size_t dim_y, int comm_size);
 

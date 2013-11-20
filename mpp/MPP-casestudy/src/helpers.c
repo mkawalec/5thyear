@@ -3,12 +3,12 @@
 #include <mpi.h>
 #include <limits.h>
 #include <math.h>
+#include <string.h>
 
 #include "helpers.h"
 
 void read_input(float *buf, float **new, size_t dim_x, size_t dim_y)
 {
-    printf("Reading input...\n");
     size_t i, j;
     for (i = 0; i < dim_x + 2; ++i) {
         for (j = 0; j < dim_y + 2; ++j) {
@@ -19,7 +19,6 @@ void read_input(float *buf, float **new, size_t dim_x, size_t dim_y)
             }
         }
     }
-    printf("done\n");
 }
 
 /** Set an array to the max value,
@@ -27,14 +26,12 @@ void read_input(float *buf, float **new, size_t dim_x, size_t dim_y)
  */
 void initialize_array(float **array, size_t dim_x, size_t dim_y)
 {
-    printf("Initializing an array...\n");
     size_t i, j;
     for (i = 0; i < dim_x + 2; ++i) {
         for (j = 0; j < dim_y + 2; ++j) {
             array[i][j] = 255;
         }
     }
-    printf("done\n");
 }
 
 /*! Computes the total length of the circumference for
@@ -86,8 +83,6 @@ void get_pos(int rank, size_t dim_x, size_t dim_y, size_t part_x, size_t part_y,
                 } else {
                     *end_x = dim_x - 1;
                 }
-//                printf("Hi from rank %d %ld %ld %ld %ld\n", square_num,
-//                        *start_x, *start_y, *end_x, *end_y);
                 return;
             }
 
@@ -100,16 +95,14 @@ MPI_Datatype create_dtype(int rank, size_t dim_x, size_t dim_y,
         size_t size_x, size_t size_y)
 {
     size_t start_x, start_y, end_x, end_y;
-    printf("passed params: %ld %ld %ld %ld\n", dim_x, dim_y, size_x, size_y);
     get_pos(rank, dim_x, dim_y, size_x, size_y,
         &start_x, &start_y, &end_x, &end_y);
 
-    MPI_Datatype current_type;
-    int count = end_y - start_y;
-    int blocklength = end_x - start_x;
-    int stride = dim_x - blocklength;
+    int count = end_x - start_x + 1;
+    int blocklength = end_y - start_y + 1;
+    int stride = dim_y;
 
-    printf("dtype %d %d %d\n", count, blocklength, stride);
+    MPI_Datatype current_type;
     MPI_Type_vector(count, blocklength, stride,
             MPI_FLOAT, &current_type);
 
@@ -148,7 +141,7 @@ struct pair get_decomposition(size_t dim_x, size_t dim_y, int comm_size)
 }
 
 void my_scatter(float *input, size_t dim_x, size_t dim_y, MPI_Comm communicator,
-                float *receive_buf, size_t *receive_x, size_t *receive_y)
+                float **receive_buf, size_t *receive_x, size_t *receive_y)
 {
     // Number of parts
     int comm_size, size_x, size_y, i, rank;
@@ -156,7 +149,6 @@ void my_scatter(float *input, size_t dim_x, size_t dim_y, MPI_Comm communicator,
     MPI_Comm_rank(communicator, &rank);
 
     struct pair optimal = get_decomposition(dim_x, dim_y, comm_size);
-//    printf("optimal %d %d\n", optimal.first, optimal.second);
 
     MPI_Request *requests;
     if (rank == 0) {
@@ -164,48 +156,84 @@ void my_scatter(float *input, size_t dim_x, size_t dim_y, MPI_Comm communicator,
         struct pair dims = get_dims(dim_x, dim_y, comm_size);
 
         for (i = 0; i < comm_size; ++i) {
-            /* Creating a temprorary datatype
-             * specially for the given exchange.
-             */
-
             size_t start_x, start_y, end_x, end_y;
-            get_pos(rank, dim_x, dim_y, optimal.first, optimal.second,
-                &start_x, &start_y, &end_x, &end_y);
-            int coords[2] = {i/dims.second, i%dims.second};
+            int coords[2] = {i/dims.second, dims.second-1-i%dims.second};
 
             int dest_rank;
-            printf("coords: %d %d %d %d\n", coords[0], coords[1], dim_x, dim_y);
             MPI_Cart_rank(communicator, coords, &dest_rank); 
-            printf("ranks: %d %d\n", i, dest_rank);
-            MPI_Datatype exchange_dtype = create_dtype(i, dim_x, dim_y,
+            MPI_Datatype exchange_dtype = create_dtype(dest_rank, dim_x, dim_y,
                     optimal.first, optimal.second);
             MPI_Type_commit(&exchange_dtype);
-            MPI_Issend(&input[start_x + dim_x * start_y], 1, exchange_dtype, 
+
+            get_pos(i, dim_x, dim_y, optimal.first, optimal.second,
+                &start_x, &start_y, &end_x, &end_y);
+            MPI_Issend(&input[start_x  * dim_y + start_y], 1, exchange_dtype, 
                        dest_rank, 0, communicator, &requests[i]);
         }
-        printf("sent\n");
     }
 
     size_t start_x, start_y, end_x, end_y;
     get_pos(rank, dim_x, dim_y, optimal.first, optimal.second,
         &start_x, &start_y, &end_x, &end_y);
 
-    size_t buffer_size = (end_x - start_x) * (end_y - start_y);
-    receive_buf = 
-        malloc(sizeof(float) * buffer_size);
-    printf("about to rec\n");
-    *receive_x = end_x - start_x;
-    *receive_y = end_y - start_y;
-    MPI_Recv(receive_buf, buffer_size, MPI_FLOAT, 0, 0, communicator, NULL);
-
+    size_t buffer_size = (end_x - start_x + 1) * (end_y - start_y + 1);
+    *receive_buf = malloc(sizeof(float) * buffer_size);
+    *receive_x = end_x - start_x + 1;
+    *receive_y = end_y - start_y + 1;
+    MPI_Recv(*receive_buf, buffer_size, MPI_FLOAT, 0, 0, communicator, NULL);
 
     if (rank == 0) {
-        for (i == 0; i < comm_size; ++i) 
+        for (i = 0; i < comm_size; ++i) 
             MPI_Wait(&requests[i], NULL);
+
         free(requests);
     }
-    printf("received\n");
 }
+
+void my_gather(float *input, size_t input_size, MPI_Comm communicator,
+               float *receive_buf, size_t receive_x, size_t receive_y)
+{
+    // Send the data in the buffer to rank 0
+    int rank;
+    MPI_Comm_rank(communicator, &rank);
+
+    MPI_Request send_request;
+    MPI_Issend(input, input_size, MPI_FLOAT, 0, 0, communicator,
+            &send_request);
+
+    if (rank == 0) {
+        // Put the received data in the right places 
+        // in the receive buffer
+        size_t i;
+        int comm_size;
+        MPI_Comm_size(communicator, &comm_size);
+
+        struct pair optimal = get_decomposition(receive_x, receive_y, comm_size);
+        struct pair dims = get_dims(receive_x, receive_y, comm_size);
+
+        pgmwrite("before.pgm", receive_buf, receive_x, receive_y);
+        for (i = 0; i < comm_size; ++i) {
+            int coords[2], coord_rank;
+            MPI_Cart_coords(communicator, i, 2, coords);
+            MPI_Cart_rank(communicator, coords, &coord_rank); 
+
+            int target_index = (dims.second - 1 -coords[1]) + dims.second * coords[0];
+            MPI_Datatype exchange_dtype = create_dtype(coord_rank, receive_x,
+                    receive_y, optimal.first, optimal.second);
+            MPI_Type_commit(&exchange_dtype);
+
+            size_t start_x, start_y, end_x, end_y;
+            get_pos(target_index, receive_x, receive_y, optimal.first, optimal.second,
+                &start_x, &start_y, &end_x, &end_y);
+
+            MPI_Recv(&receive_buf[start_x * receive_y + start_y], 1, 
+                    exchange_dtype, coord_rank, 0, communicator, NULL);
+        }
+    }
+
+    MPI_Wait(&send_request, NULL);
+}
+
 
 struct pair get_dims(size_t dim_x, size_t dim_y, int comm_size)
 {

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mpi.h>
+#include <string.h>
 
 #include "pgmio.h"
 #include "arralloc.h"
@@ -13,8 +14,6 @@
 // NOTE: We don't want to be using MPI_dims_create, as
 // we have no guarantee that an image will be square-like
 // and we want to minimize halo swaps
-
-#define BUFFSIZE 100000
 
 int main(int argc, char *argv[])
 {
@@ -56,7 +55,7 @@ int main(int argc, char *argv[])
     if (rank == 0) pgmread(image_name, masterbuf, dim_x, dim_y);
 
     my_scatter(masterbuf, dim_x, dim_y, proc_topology,
-               buf, &part_x, &part_y);
+               &buf, &part_x, &part_y);
 
     // Allocating the computation arrays
     float **edge = arralloc(sizeof(float), 2, part_x + 2, part_y + 2);
@@ -65,27 +64,47 @@ int main(int argc, char *argv[])
 
     read_input(buf, edge, part_x, part_y);
     initialize_array(old, part_x, part_y);
+    initialize_array(new, part_x, part_y);
 
     int left_rank, right_rank, up_rank, down_rank;
     MPI_Cart_shift(proc_topology, 0, 1, &left_rank, &right_rank);
     MPI_Cart_shift(proc_topology, 1, 1, &up_rank, &down_rank);
+    printf("I am %d, left: %d, right: %d, up: %d, down: %d\n",
+            rank, left_rank, right_rank, up_rank, down_rank);
+    
+    MPI_Datatype vert_type;
+    MPI_Type_vector(part_x, 1, part_y + 2,
+            MPI_FLOAT, &vert_type);
+    MPI_Type_commit(&vert_type);
 
     // Main loop
     size_t iter, i, j;
     for (iter = 0; iter < 10000; ++iter) {
-        // Sync the halos
+        if (rank == 0 && iter%1000 == 0)
+            printf("Iteration %ld...\n", iter);
+
+        // Halo sync requests handles
         MPI_Request right_req, left_req, up_req, down_req;
 
-        MPI_Issend(&(old[part_x][0]), part_y, MPI_FLOAT,
+        // Sends
+        MPI_Issend(&old[part_x][1], part_y, MPI_FLOAT,
                 right_rank, 0, proc_topology, &right_req);
-        MPI_Issend(&(old[1][0]), part_y, MPI_FLOAT,
-                left_rank, 0, proc_topology, &right_req);
+        MPI_Issend(&old[1][1], part_y, MPI_FLOAT,
+                left_rank, 0, proc_topology, &left_req);
+        MPI_Issend(&old[1][1], 1, vert_type, 
+                down_rank, 0, proc_topology, &down_req);
+        MPI_Issend(&old[1][part_y], 1, vert_type,
+                up_rank, 0, proc_topology, &up_req);
 
-        MPI_Recv(&(old[0][0]), part_y, MPI_FLOAT,
+        // Receives
+        MPI_Recv(&old[0][1], part_y, MPI_FLOAT,
                 left_rank, 0, proc_topology, NULL);
-        MPI_Recv(&(old[part_x + 1][0]), part_y, MPI_FLOAT,
+        MPI_Recv(&old[part_x + 1][1], part_y, MPI_FLOAT,
                 right_rank, 0, proc_topology, NULL);
-
+        MPI_Recv(&old[1][0], 1, vert_type,
+                down_rank, 0, proc_topology, NULL);
+        MPI_Recv(&old[1][part_y + 1], 1, vert_type,
+                up_rank, 0, proc_topology, NULL);
 
         for (i = 1; i < part_x + 1; ++i) {
             for (j = 1; j < part_y + 1; ++j) {
@@ -109,13 +128,15 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < part_x; ++i) {
         for (j = 0; j < part_y; ++j) 
-            buf[i * dim_y + j] = old[i+1][j+1];
+            buf[i * part_y + j] = old[i+1][j+1];
     }
 
     // Gather!
-    MPI_Finalize();
-    return 0;
+    my_gather(buf, part_x * part_y, proc_topology,
+              masterbuf, dim_x, dim_y);
 
     if (rank == 0) pgmwrite("output.pgm", masterbuf, dim_x, dim_y);
+    
+    MPI_Finalize();
     return 0;
 }
