@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 
     MPI_Comm proc_topology;
     MPI_Cart_create(MPI_COMM_WORLD, 
-            2, &(dims[0]), &(periods[0]), 0, &proc_topology);
+            2, &(dims[0]), &(periods[0]), 1, &proc_topology);
     MPI_Comm_rank(proc_topology, &rank);
 
     // Reading in the input data
@@ -69,8 +69,6 @@ int main(int argc, char *argv[])
     int left_rank, right_rank, up_rank, down_rank;
     MPI_Cart_shift(proc_topology, 0, 1, &left_rank, &right_rank);
     MPI_Cart_shift(proc_topology, 1, 1, &up_rank, &down_rank);
-    printf("I am %d, left: %d, right: %d, up: %d, down: %d\n",
-            rank, left_rank, right_rank, up_rank, down_rank);
     
     MPI_Datatype vert_type;
     MPI_Type_vector(part_x, 1, part_y + 2,
@@ -79,11 +77,11 @@ int main(int argc, char *argv[])
 
     // Main loop
     size_t iter, i, j;
-    for (iter = 0; iter < 10000; ++iter) {
-        if (rank == 0 && iter%1000 == 0)
-            printf("Iteration %ld...\n", iter);
+    for (iter = 0; iter < 1000; ++iter) {
+        if (rank == 0 && iter%500 == 0)
+            printf("Doing iteration %ld\n", iter);
 
-        // Halo sync requests handles
+        // Sync the halos
         MPI_Request right_req, left_req, up_req, down_req;
 
         // Sends
@@ -132,11 +130,21 @@ int main(int argc, char *argv[])
     }
 
     // Gather!
-    my_gather(buf, part_x * part_y, proc_topology,
+    my_gather(buf, part_x, part_y, proc_topology,
               masterbuf, dim_x, dim_y);
 
     if (rank == 0) pgmwrite("output.pgm", masterbuf, dim_x, dim_y);
-    
     MPI_Finalize();
+    /*
+    char rank_str[4];
+    sprintf(rank_str, "%d", rank);
+    const char *name = "output";
+    const char *ext = ".pgm";
+    char *filename = malloc(strlen(rank_str) + strlen(name) + strlen(ext));
+    strcpy(filename, name);
+    strcat(filename, rank_str);
+    strcat(filename, ext);
+    pgmwrite(filename, buf, part_x, part_y);
+    */
     return 0;
 }

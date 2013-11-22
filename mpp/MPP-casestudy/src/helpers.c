@@ -157,18 +157,15 @@ void my_scatter(float *input, size_t dim_x, size_t dim_y, MPI_Comm communicator,
 
         for (i = 0; i < comm_size; ++i) {
             size_t start_x, start_y, end_x, end_y;
-            int coords[2] = {i/dims.second, dims.second-1-i%dims.second};
 
-            int dest_rank;
-            MPI_Cart_rank(communicator, coords, &dest_rank); 
-            MPI_Datatype exchange_dtype = create_dtype(dest_rank, dim_x, dim_y,
+            MPI_Datatype exchange_dtype = create_dtype(i, dim_x, dim_y,
                     optimal.first, optimal.second);
             MPI_Type_commit(&exchange_dtype);
 
             get_pos(i, dim_x, dim_y, optimal.first, optimal.second,
                 &start_x, &start_y, &end_x, &end_y);
             MPI_Issend(&input[start_x  * dim_y + start_y], 1, exchange_dtype, 
-                       dest_rank, 0, communicator, &requests[i]);
+                       i, 0, communicator, &requests[i]);
         }
     }
 
@@ -177,10 +174,18 @@ void my_scatter(float *input, size_t dim_x, size_t dim_y, MPI_Comm communicator,
         &start_x, &start_y, &end_x, &end_y);
 
     size_t buffer_size = (end_x - start_x + 1) * (end_y - start_y + 1);
+    float *tmp_buf = malloc(sizeof(float) * buffer_size);
     *receive_buf = malloc(sizeof(float) * buffer_size);
     *receive_x = end_x - start_x + 1;
     *receive_y = end_y - start_y + 1;
-    MPI_Recv(*receive_buf, buffer_size, MPI_FLOAT, 0, 0, communicator, NULL);
+    MPI_Recv(tmp_buf, buffer_size, MPI_FLOAT, 0, 0, communicator, NULL);
+
+    int row_height = end_y - start_y + 1;
+    for (i = 0; i < buffer_size; ++i) {
+        int index = row_height - 1 - i%row_height + (i / row_height) * row_height;
+        (*receive_buf)[i] = tmp_buf[index];
+    }
+    free(tmp_buf);
 
     if (rank == 0) {
         for (i = 0; i < comm_size; ++i) 
@@ -190,15 +195,29 @@ void my_scatter(float *input, size_t dim_x, size_t dim_y, MPI_Comm communicator,
     }
 }
 
-void my_gather(float *input, size_t input_size, MPI_Comm communicator,
+void my_gather(float *input, size_t input_x, size_t input_y, MPI_Comm communicator,
                float *receive_buf, size_t receive_x, size_t receive_y)
 {
     // Send the data in the buffer to rank 0
-    int rank;
+    int rank, i, comm_size;
     MPI_Comm_rank(communicator, &rank);
+    MPI_Comm_size(communicator, &comm_size);
+    struct pair optimal = get_decomposition(receive_x, receive_y, comm_size);
+
+    size_t start_x, start_y, end_x, end_y;
+    get_pos(rank, receive_x, receive_y, optimal.first, optimal.second,
+        &start_x, &start_y, &end_x, &end_y);
+    int buffer_size = (end_x - start_x + 1) * (end_y - start_y + 1);
+    int row_height = end_y - start_y + 1;
+    float *send_buf = malloc(sizeof(float) * buffer_size);
+
+    for (i = 0; i < buffer_size; ++i) {
+        int index = row_height - 1 - i%row_height + (i / row_height) * row_height;
+        send_buf[i] = input[index];
+    }
 
     MPI_Request send_request;
-    MPI_Issend(input, input_size, MPI_FLOAT, 0, 0, communicator,
+    MPI_Issend(send_buf, input_x * input_y, MPI_FLOAT, 0, 0, communicator,
             &send_request);
 
     if (rank == 0) {
@@ -211,27 +230,25 @@ void my_gather(float *input, size_t input_size, MPI_Comm communicator,
         struct pair optimal = get_decomposition(receive_x, receive_y, comm_size);
         struct pair dims = get_dims(receive_x, receive_y, comm_size);
 
-        pgmwrite("before.pgm", receive_buf, receive_x, receive_y);
         for (i = 0; i < comm_size; ++i) {
-            int coords[2], coord_rank;
+            int coords[2];
             MPI_Cart_coords(communicator, i, 2, coords);
-            MPI_Cart_rank(communicator, coords, &coord_rank); 
 
-            int target_index = (dims.second - 1 -coords[1]) + dims.second * coords[0];
-            MPI_Datatype exchange_dtype = create_dtype(coord_rank, receive_x,
+            MPI_Datatype exchange_dtype = create_dtype(i, receive_x,
                     receive_y, optimal.first, optimal.second);
             MPI_Type_commit(&exchange_dtype);
 
             size_t start_x, start_y, end_x, end_y;
-            get_pos(target_index, receive_x, receive_y, optimal.first, optimal.second,
+            get_pos(i, receive_x, receive_y, optimal.first, optimal.second,
                 &start_x, &start_y, &end_x, &end_y);
 
             MPI_Recv(&receive_buf[start_x * receive_y + start_y], 1, 
-                    exchange_dtype, coord_rank, 0, communicator, NULL);
+                    exchange_dtype, i, 0, communicator, NULL);
         }
     }
 
     MPI_Wait(&send_request, NULL);
+    free(send_buf);
 }
 
 
