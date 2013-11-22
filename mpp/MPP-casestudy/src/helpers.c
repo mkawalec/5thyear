@@ -12,6 +12,9 @@ void read_input(float *buf, float **new, size_t dim_x, size_t dim_y)
     size_t i, j;
     for (i = 0; i < dim_x + 2; ++i) {
         for (j = 0; j < dim_y + 2; ++j) {
+            /* Set the halos to 255 and the inner
+             * values to corresponding values from buf
+             */
             if (i == 0 || i == dim_x + 1 || j == 0 || j == dim_y + 1) {
                 new[i][j] = 255;
             } else {
@@ -36,6 +39,9 @@ size_t circ(size_t dim_x, size_t dim_y, size_t part_x, size_t part_y)
     size_t length = 0, x_position, y_position;
     for (x_position = 0; x_position < dim_x; x_position += part_x) {
         for (y_position = 0; y_position < dim_y; y_position += part_y) {
+            // If there is enough room to put the whole block
+            // add the whole block size, if there isn't just add the
+            // amout that fits
             if (y_position + part_y < dim_y) {
                 length += 2 * part_y;
             } else {
@@ -56,31 +62,29 @@ size_t circ(size_t dim_x, size_t dim_y, size_t part_x, size_t part_y)
 void get_pos(int rank, size_t dim_x, size_t dim_y, size_t part_x, size_t part_y,
         size_t *start_x, size_t *start_y, size_t *end_x, size_t *end_y) 
 {
-    size_t square_num = 0, x_position, y_position;
+    size_t square_num = 0, x_position, 
+           y_position, in_column;
 
-    for (x_position = 0; x_position < dim_x; x_position += part_x) {
-        for (y_position = 0; y_position < dim_y; y_position += part_y) {
-            if (square_num == rank) {
-                if (start_x != NULL)
-                    *start_x = x_position;
-                if (start_y != NULL)
-                    *start_y = y_position;
+    in_column = ceil(dim_y / (double) part_y);
+    x_position = floor(rank / in_column) * part_x;
+    y_position = rank%in_column * part_y;
 
-                if (y_position + part_y < dim_y && end_y != NULL) {
-                    *end_y = y_position + part_y - 1;
-                } else if (end_y != NULL) {
-                    *end_y = dim_y - 1;
-                }
-                if (x_position + part_x < dim_x && end_y != NULL) {
-                    *end_x = x_position + part_x - 1;
-                } else if (end_y != NULL) {
-                    *end_x = dim_x - 1;
-                }
-                return;
-            }
+    // Set the start and end values, if they
+    // are requested to be ignored then ignore them
+    if (start_x != NULL)
+        *start_x = x_position;
+    if (start_y != NULL)
+        *start_y = y_position;
 
-            ++square_num;
-        }
+    if (y_position + part_y < dim_y && end_y != NULL) {
+        *end_y = y_position + part_y - 1;
+    } else if (end_y != NULL) {
+        *end_y = dim_y - 1;
+    }
+    if (x_position + part_x < dim_x && end_y != NULL) {
+        *end_x = x_position + part_x - 1;
+    } else if (end_y != NULL) {
+        *end_x = dim_x - 1;
     }
 }
 
@@ -91,6 +95,8 @@ MPI_Datatype create_dtype(int rank, size_t dim_x, size_t dim_y,
     get_pos(rank, dim_x, dim_y, size_x, size_y,
         &start_x, &start_y, &end_x, &end_y);
 
+    // The description of a C-indexed rectangular
+    // area as MPI virtual type
     int count = end_x - start_x + 1;
     int blocklength = end_y - start_y + 1;
     int stride = dim_y;
@@ -109,8 +115,13 @@ struct pair get_decomposition_length(size_t dim_x, size_t dim_y, int comm_size)
     struct pair smallest;
 
     for (i = 1; i < sqrt(comm_size) + 1; ++i) {
+        /*
+         * If the current decomposition divides number
+         * of nodes (thus is possible), compute its total
+         * circumference and if it is a smallest circumference
+         * so far, remember that it is a smallest circumference.
+         */
         if (comm_size%i == 0) {
-            // X and Y part sizes
             int current_x, current_y;
             size_t temp_circ;
             current_x = ceil(dim_x / (double)i);
@@ -157,6 +168,8 @@ void my_scatter(float *input, size_t dim_x, size_t dim_y, MPI_Comm communicator,
     // starting conditions
     struct pair optimal = get_decomposition_length(dim_x, dim_y, comm_size);
 
+    // If the process has rank zero (is a 'master' process),
+    // make it send different parts to different processes
     MPI_Request *requests;
     if (rank == 0) {
         requests = malloc(sizeof(MPI_Request) * comm_size);
@@ -248,17 +261,8 @@ struct pair get_decomposition_size(size_t dim_x, size_t dim_y, int comm_size)
 {
     struct pair sizes = get_decomposition_length(dim_x, dim_y, comm_size);
     struct pair dims;
-    dims.first = 0;
-    dims.second = 0;
-    int x_pos, y_pos;
-
-    for (x_pos = 0; x_pos < dim_x; x_pos += sizes.first) {
-        dims.first += 1;
-        dims.second = 0;
-
-        for (y_pos = 0; y_pos < dim_y; y_pos += sizes.second)
-            dims.second += 1;
-    }
+    dims.first = ceil(dim_x / sizes.first);
+    dims.second = ceil(dim_y / sizes.second);
 
     return dims;
 }
