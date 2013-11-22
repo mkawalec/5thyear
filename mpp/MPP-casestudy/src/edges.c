@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 
     MPI_Comm proc_topology;
     MPI_Cart_create(MPI_COMM_WORLD, 
-            2, &(dims[0]), &(periods[0]), 1, &proc_topology);
+            2, &(dims[0]), &(periods[0]), 0, &proc_topology);
     MPI_Comm_rank(proc_topology, &rank);
 
     // Reading in the input data
@@ -63,8 +63,8 @@ int main(int argc, char *argv[])
     float **old = arralloc(sizeof(float), 2, part_x + 2, part_y + 2);
 
     read_input(buf, edge, part_x, part_y);
-    initialize_array(old, part_x, part_y);
-    initialize_array(new, part_x, part_y);
+    initialize_array(old, part_x + 2, part_y + 2);
+    initialize_array(new, part_x + 2, part_y + 2);
 
     int left_rank, right_rank, up_rank, down_rank;
     MPI_Cart_shift(proc_topology, 0, 1, &left_rank, &right_rank);
