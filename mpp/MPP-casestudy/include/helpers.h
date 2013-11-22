@@ -40,6 +40,15 @@ void read_input(float *buf, float **new, size_t dim_x, size_t dim_y);
 void initialize_array(float **array, size_t dim_x, size_t dim_y);
 
 /**
+ *  @brief          Computes sum of all non-halo elements in an array
+ *  @param array    a 2D array containing halos
+ *  @param dim_x    an X size of the array inner elements (witout the halos)
+ *  @param dim_y    an Y size of the array
+ *  @return         a sum of values
+ */
+unsigned long long compute_sum(float **array, size_t dim_x, size_t dim_y);
+
+/**
  *  @brief          Computes the total parts circumference for 
  *                  a given decomposition.
  *  @param dim_x    X dimension of a grid sliced into parts

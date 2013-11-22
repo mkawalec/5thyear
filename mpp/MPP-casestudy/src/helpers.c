@@ -34,6 +34,20 @@ void initialize_array(float **array, size_t dim_x, size_t dim_y)
     }
 }
 
+unsigned long long compute_sum(float **array, size_t dim_x, size_t dim_y)
+{
+    unsigned long long sum = 0;
+    size_t i, j;
+    for (i = 1; i < dim_x + 1; ++i) {
+        for (j = 1; j < dim_y + 1; ++j) {
+            sum += array[i][j];
+        }
+    }
+
+    return sum;
+}
+            
+
 size_t circ(size_t dim_x, size_t dim_y, size_t part_x, size_t part_y)
 {
     size_t length = 0, x_position, y_position;
