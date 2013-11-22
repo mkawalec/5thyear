@@ -102,7 +102,7 @@ MPI_Datatype create_dtype(int rank, size_t dim_x, size_t dim_y,
     return current_type;
 }
 
-struct pair get_decomposition(size_t dim_x, size_t dim_y, int comm_size)
+struct pair get_decomposition_length(size_t dim_x, size_t dim_y, int comm_size)
 {
     int i;
     size_t circumference = ULONG_MAX;
@@ -155,12 +155,12 @@ void my_scatter(float *input, size_t dim_x, size_t dim_y, MPI_Comm communicator,
 
     // Find the optimal decomposition for the given
     // starting conditions
-    struct pair optimal = get_decomposition(dim_x, dim_y, comm_size);
+    struct pair optimal = get_decomposition_length(dim_x, dim_y, comm_size);
 
     MPI_Request *requests;
     if (rank == 0) {
         requests = malloc(sizeof(MPI_Request) * comm_size);
-        struct pair dims = get_dims(dim_x, dim_y, comm_size);
+        struct pair dims = get_decomposition_size(dim_x, dim_y, comm_size);
 
         for (i = 0; i < comm_size; ++i) {
             size_t start_x, start_y, end_x, end_y;
@@ -211,7 +211,7 @@ void my_gather(float *input, size_t input_x, size_t input_y, MPI_Comm communicat
 
     // Gather the information needed for buffer inversion
     // and execute the vertical invertion
-    struct pair optimal = get_decomposition(receive_x, receive_y, comm_size);
+    struct pair optimal = get_decomposition_length(receive_x, receive_y, comm_size);
     size_t start_x, start_y, end_x, end_y;
     get_pos(rank, receive_x, receive_y, optimal.first, optimal.second,
         &start_x, &start_y, &end_x, &end_y);
@@ -244,9 +244,9 @@ void my_gather(float *input, size_t input_x, size_t input_y, MPI_Comm communicat
 }
 
 
-struct pair get_dims(size_t dim_x, size_t dim_y, int comm_size)
+struct pair get_decomposition_size(size_t dim_x, size_t dim_y, int comm_size)
 {
-    struct pair sizes = get_decomposition(dim_x, dim_y, comm_size);
+    struct pair sizes = get_decomposition_length(dim_x, dim_y, comm_size);
     struct pair dims;
     dims.first = 0;
     dims.second = 0;
