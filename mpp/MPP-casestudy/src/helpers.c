@@ -280,3 +280,18 @@ struct pair get_decomposition_size(size_t dim_x, size_t dim_y, int comm_size)
 
     return dims;
 }
+
+float compute_max_change(float **old, float **new, size_t dim_x, size_t dim_y)
+{
+    float max_change = -1;
+    size_t i, j;
+    for (i = 1; i < dim_x + 1; ++i) {
+        for (j = 1; j < dim_y + 1; j++) {
+            if (fabs(new[i][j] - old[i][j]) > max_change)
+                max_change = fabs(new[i][j] - old[i][j]);
+        }
+    }
+
+    return max_change;
+}
+

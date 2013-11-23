@@ -8,6 +8,7 @@
 #include "helpers.h"
 
 #define PRINT_EVERY 250
+#define END_THRESHOLD 0.1
 
 int main(int argc, char *argv[])
 {
@@ -77,8 +78,12 @@ int main(int argc, char *argv[])
 
     // Main loop
     size_t iter, i, j;
-    for (iter = 0; iter < 1000; ++iter) {
-        if (iter%PRINT_EVERY == 0) {
+    for (iter = 0; 1; ++iter) {
+        /*
+         * Printing statistics and checking if 
+         * an end condition is met
+         */
+        if (iter%PRINT_EVERY == 0 && iter != 0) {
             unsigned long long pixel_sum = compute_sum(old, part_x, part_y),
                                all_pixels;
             MPI_Reduce(&pixel_sum, &all_pixels, 1, MPI_UNSIGNED_LONG_LONG,
@@ -87,6 +92,14 @@ int main(int argc, char *argv[])
             if (rank == 0) printf("At iteration %ld the"
                                   " average pixel value is %lld\n", 
                                   iter, all_pixels / (dim_x * dim_y));
+
+            float max_change = compute_max_change(old, new, part_x, part_y);
+            float global_max_change;
+            MPI_Allreduce(&max_change, &global_max_change, 1, MPI_FLOAT,
+                    MPI_MAX, proc_topology);
+
+            if (global_max_change < END_THRESHOLD) 
+                break;
         }
 
         // Sync the halos

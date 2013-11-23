@@ -176,5 +176,6 @@ struct pair get_decomposition_length(size_t dim_x, size_t dim_y, int comm_size);
  *                      number of nodes in X and the second in Y directions.
  */
 struct pair get_decomposition_size(size_t dim_x, size_t dim_y, int comm_size);
+float compute_max_change(float **old, float **new, size_t dim_x, size_t dim_y);
 
 #endif
