@@ -8,7 +8,7 @@ find_package(MPI REQUIRED)
 include_directories(${MPI_INCLUDE_PATH})
 
 add_executable(edges src/edges.c src/pgmio.c src/arralloc.c src/helpers.c ${HEADER_FILES})
-target_link_libraries(edges -lm ${MPI_C_LIBRARIES})
+target_link_libraries(edges -lm ${MPI_LIBRARIES})
 
 if(MPI_COMPILE_FLAGS)
     set_target_properties(edges PROPERTIES

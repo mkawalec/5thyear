@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
     MPI_Type_vector(part_x, 1, part_y + 2,
             MPI_FLOAT, &vert_type);
     MPI_Type_commit(&vert_type);
+    MPI_Status tmp_status;
 
     // Main loop
     size_t iter, i, j;
@@ -120,13 +121,13 @@ int main(int argc, char *argv[])
 
         // Receives
         MPI_Recv(&old[0][1], part_y, MPI_FLOAT,
-                left_rank, 0, proc_topology, NULL);
+                left_rank, 0, proc_topology, &tmp_status);
         MPI_Recv(&old[part_x + 1][1], part_y, MPI_FLOAT,
-                right_rank, 0, proc_topology, NULL);
+                right_rank, 0, proc_topology, &tmp_status);
         MPI_Recv(&old[1][0], 1, vert_type,
-                down_rank, 0, proc_topology, NULL);
+                down_rank, 0, proc_topology, &tmp_status);
         MPI_Recv(&old[1][part_y + 1], 1, vert_type,
-                up_rank, 0, proc_topology, NULL);
+                up_rank, 0, proc_topology, &tmp_status);
 
         // Apply the transformation
         for (i = 1; i < part_x + 1; ++i) {
@@ -139,10 +140,10 @@ int main(int argc, char *argv[])
 
         // Make sure the requests complete before
         // modifying the old array
-        MPI_Wait(&right_req, NULL);
-        MPI_Wait(&left_req, NULL);
-        MPI_Wait(&up_req, NULL);
-        MPI_Wait(&down_req, NULL);
+        MPI_Wait(&right_req, &tmp_status);
+        MPI_Wait(&left_req, &tmp_status);
+        MPI_Wait(&up_req, &tmp_status);
+        MPI_Wait(&down_req, &tmp_status);
 
         // Swap the old and new arrays
         float **tmp = old;
