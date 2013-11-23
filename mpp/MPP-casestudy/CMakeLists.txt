@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.6)
 project(casestudy)
 include_directories(src include)
 set(HEADER_FILES include/pgmio.h include/arralloc.h include/helpers.h)
@@ -8,7 +8,7 @@ find_package(MPI REQUIRED)
 include_directories(${MPI_INCLUDE_PATH})
 
 add_executable(edges src/edges.c src/pgmio.c src/arralloc.c src/helpers.c ${HEADER_FILES})
-target_link_libraries(edges -lm ${MPI_LIBRARIES})
+target_link_libraries(edges -lm ${MPI_C_LIBRARIES})
 
 if(MPI_COMPILE_FLAGS)
     set_target_properties(edges PROPERTIES
@@ -20,11 +20,6 @@ if(MPI_LINK_FLAGS)
         LINK_FLAGS "${MPI_LINK_FLAGS}")
 endif()
 
-if (CMAKE_COMPILER_IS_GNUCXX)
-    message(status "Setting GCC flags")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -Wall -Wextra -W -pedantic -g")
-else()
-    message(status "Setting MSVC flags")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHc-")
-endif()
+message(status "Setting GCC flags")
+set(CMAKE_CC_FLAGS "${CMAKE_CC_FLAGS} -O2 -Wall -Wextra -W -pedantic -g")
 
