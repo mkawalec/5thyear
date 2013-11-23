@@ -37,7 +37,6 @@ int main(int argc, char *argv[])
 
     // Prepare for topology generation
     struct pair cart_dims = get_decomposition_size(dim_x, dim_y, process_count);
-    printf("decomposition %d %d\n", cart_dims.first, cart_dims.second);
     int dims[2] = {cart_dims.first, cart_dims.second};
     int periods[2] = {0, 0};
     size_t part_x, part_y;
