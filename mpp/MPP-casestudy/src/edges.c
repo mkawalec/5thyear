@@ -164,7 +164,8 @@ int main(int argc, char *argv[])
     // Write the output data to a file and exit
     if (rank == 0) {
         pgmwrite("output.pgm", masterbuf, dim_x, dim_y);
-        printf("Total time taken: %lf s\n", get_time() - start_time);
+        printf("Total time taken with %d processes: %lf s\n", 
+                process_count, get_time() - start_time);
     }
     MPI_Finalize();
 
