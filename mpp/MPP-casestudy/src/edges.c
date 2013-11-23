@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <mpi.h>
 #include <string.h>
+#include <omp.h>
 
 #include "pgmio.h"
 #include "arralloc.h"
@@ -21,7 +22,7 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &process_count);
 
-    double start_time = get_time();
+    double start_time = omp_get_wtime();
 
     if (argc < 4) {
         if (rank == 0) 
@@ -175,7 +176,7 @@ int main(int argc, char *argv[])
     if (rank == 0) {
         pgmwrite("output.pgm", masterbuf, dim_x, dim_y);
         printf("Total time taken with %d processes: %lf s\n", 
-                process_count, get_time() - start_time);
+                process_count, omp_get_wtime() - start_time);
     }
     MPI_Finalize();
 

@@ -189,10 +189,4 @@ struct pair get_decomposition_size(size_t dim_x, size_t dim_y, int comm_size);
  */
 float compute_max_change(float **old, float **new, size_t dim_x, size_t dim_y);
 
-/**
- *  @brief  Returns a current time in seconds,
- *          up to a reasonable accuracy
- */
-double get_time();
-
 #endif

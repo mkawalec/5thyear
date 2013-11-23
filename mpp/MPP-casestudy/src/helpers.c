@@ -298,11 +298,3 @@ float compute_max_change(float **old, float **new, size_t dim_x, size_t dim_y)
 
     return max_change;
 }
-
-double get_time()
-{
-    struct timeval time;
-    gettimeofday(&time, NULL);
-    return (1E+09 * time.tv_sec + time.tv_usec) / (double) 1E+09;
-}
-
