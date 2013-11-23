@@ -21,5 +21,5 @@ if(MPI_LINK_FLAGS)
 endif()
 
 message(status "Setting GCC flags")
-set(CMAKE_CC_FLAGS "${CMAKE_CC_FLAGS} -O2 -Wall -Wextra -W -pedantic -g")
+set(CMAKE_CC_FLAGS "${CMAKE_CC_FLAGS} -O2 -Wall -Wextra -W -pedantic")
 
