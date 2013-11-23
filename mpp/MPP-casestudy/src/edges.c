@@ -21,6 +21,8 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &process_count);
 
+    double start_time = get_time();
+
     if (argc < 4) {
         if (rank == 0) 
             printf("This program is run as follows: %s image_name dim_x dim_y\n\n",
@@ -159,7 +161,10 @@ int main(int argc, char *argv[])
               masterbuf, dim_x, dim_y);
 
     // Write the output data to a file and exit
-    if (rank == 0) pgmwrite("output.pgm", masterbuf, dim_x, dim_y);
+    if (rank == 0) {
+        pgmwrite("output.pgm", masterbuf, dim_x, dim_y);
+        printf("Total time taken: %lf s\n", get_time() - start_time);
+    }
     MPI_Finalize();
 
     return 0;

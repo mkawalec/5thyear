@@ -176,6 +176,23 @@ struct pair get_decomposition_length(size_t dim_x, size_t dim_y, int comm_size);
  *                      number of nodes in X and the second in Y directions.
  */
 struct pair get_decomposition_size(size_t dim_x, size_t dim_y, int comm_size);
+
+/**
+ *  @brief          Computes max difference between 
+ *                  pixel values on two images.
+ *  @param old      one image in a 2D array (with halos)
+ *  @param new      another image in a 2D array (with halos)
+ *  @param dim_x    X direction size of both images (excluding halos)
+ *  @param dim_y    Y direction size of both images (excluding halos)
+ *  @return         maximum difference between pixels at 
+ *                  the same coordinates on both images
+ */
 float compute_max_change(float **old, float **new, size_t dim_x, size_t dim_y);
+
+/**
+ *  @brief  Returns a current time in seconds,
+ *          up to a reasonable accuracy
+ */
+double get_time();
 
 #endif
