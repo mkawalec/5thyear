@@ -1,5 +1,4 @@
 #
 /bin/bash
 
-export OMP_NUM_THREADS=$NSLOTS
-data/static_edges data/edge768x1152 768 1152
+mpirun -np $NSLOTS data/morar-edges data/edge768x1152.pgm 768 1152
