@@ -35,8 +35,18 @@ int main(int argc, char *argv[])
     size_t dim_x = strtoul(argv[2], NULL, 10);
     size_t dim_y = strtoul(argv[3], NULL, 10);
 
-    // Prepare for topology generation
     struct pair cart_dims = get_decomposition_size(dim_x, dim_y, process_count);
+
+    // Check if the decomposition is possible
+    if (cart_dims.first * cart_dims.second != process_count) {
+        if (rank == 0) printf("It is impossible to divide the image"
+                              " between the provided number of processes!"
+                              " Terminating.\n");
+        MPI_Finalize();
+        return -1;
+    }
+
+    // Prepare for topology generation
     int dims[2] = {cart_dims.first, cart_dims.second};
     int periods[2] = {0, 0};
     size_t part_x, part_y;
