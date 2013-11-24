@@ -143,6 +143,7 @@ We have not chosen ``Standard send'' as we want to have more control over over h
 The Gather algorithm is very similar in principle to the scatter algorithm provided above and thus we feel that providing it here in form of pseudo-code would be redundant -- interested readers should see the source code. The main conceptual difference between gather and scatter is the direction of data transfer. The small parts of the data are inverted and sent by all the processes to the 0th process. Then they are assembled in correct places in the master buffer and the gather is complete.
 
 We do not use non-blocking receive routines as we feel that a slight speed boost achieved by them is easily offset by simpler and less bug-prone gather code. This is especially true as Gather is ran only once per program run and so using blocking receives adds only minimal cost.
+% As can be seen in VAMPIR, the time spent on gather is minimal (7ms) (initial scatter takes less than 13ms)
 \subsection{Main program loop}
 \subsection{Ensuring correctness}
 
