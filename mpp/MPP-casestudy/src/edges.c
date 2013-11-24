@@ -53,7 +53,8 @@ int main(int argc, char *argv[])
     size_t part_x, part_y;
 
     float *buf;
-    float *masterbuf = malloc(sizeof(float) * dim_x * dim_y);
+    float *masterbuf;
+    if (rank == 0) masterbuf = malloc(sizeof(float) * dim_x * dim_y);
 
     // Generate the topology
     MPI_Comm proc_topology;
@@ -88,6 +89,13 @@ int main(int argc, char *argv[])
     MPI_Type_vector(part_x, 1, part_y + 2,
             MPI_FLOAT, &vert_type);
     MPI_Type_commit(&vert_type);
+
+    /* 
+     * A temprorary status is used, instead of passing a NULL
+     * pointer to MPI_Recv and MPI_Wait as MPICH2 does not support
+     * passing a NULL pointer if a request status is not needed,
+     * thus adding this needless complexity.
+     */
     MPI_Status tmp_status;
 
     // Main loop

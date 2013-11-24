@@ -149,6 +149,16 @@ struct pair get_decomposition_length(size_t dim_x, size_t dim_y, int comm_size)
     return smallest;
 }
 
+struct pair get_decomposition_size(size_t dim_x, size_t dim_y, int comm_size)
+{
+    struct pair sizes = get_decomposition_length(dim_x, dim_y, comm_size);
+    struct pair dims;
+    dims.first = ceil(dim_x / (double) sizes.first);
+    dims.second = ceil(dim_y / (double) sizes.second);
+
+    return dims;
+}
+
 void invert(float **buffer, int height, int size)
 {
     float *tmp_buffer = malloc(sizeof(float) * size);
@@ -167,16 +177,6 @@ void invert(float **buffer, int height, int size)
 }
 
 
-
-struct pair get_decomposition_size(size_t dim_x, size_t dim_y, int comm_size)
-{
-    struct pair sizes = get_decomposition_length(dim_x, dim_y, comm_size);
-    struct pair dims;
-    dims.first = ceil(dim_x / (double) sizes.first);
-    dims.second = ceil(dim_y / (double) sizes.second);
-
-    return dims;
-}
 
 float compute_max_change(float **old, float **new, size_t dim_x, size_t dim_y)
 {
