@@ -1,5 +1,5 @@
 /**
- *  @file   helpers.h
+ *  @file   comm.h
  *  @Author Michal Kawalec (michal@bazzle.me)
  *  @date   November, 2013
  *  @brief  Functions responsible for communication

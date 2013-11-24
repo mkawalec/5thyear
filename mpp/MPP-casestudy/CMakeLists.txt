@@ -34,3 +34,13 @@ message(status "Setting GCC flags")
 set(CMAKE_CC_FLAGS "${CMAKE_CC_FLAGS} -O2 -Wall -Wextra -W -pedantic -g")
 
 target_link_libraries(edges -lm ${MPI_LIBRARIES} -fopenmp)
+
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+    add_custom_target(doc
+        ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating API documentation with Doxygen" VERBATIM
+        )
+endif(DOXYGEN_FOUND)
