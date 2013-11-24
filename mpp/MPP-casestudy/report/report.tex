@@ -1,16 +1,26 @@
 \documentclass[11pt,a4paper]{article}
 
-\usepackage{color,graphicx,listings,wrapfig}
+\usepackage{color,graphicx,listings,wrapfig,hyperref}
 \usepackage[margin=2cm]{geometry}
 
 \graphicspath{{./img/}}
 
 \begin{document}
-\title{Report from Message Passing Programming}
+\title{Message Passing Programming Project}
 \author{c02f-32d66e}
 \maketitle
 
 \section{Introduction}
+Our task in this assignment was to use \texttt{MPI} library to build an image-transfroming parallel program.
+The program applies an iterative method of recovering an original image from an image containing a result of an edge detection algorithm applied to the original image. 
+To enable more efficient use of resources, our program uses a 2D image decomposition to distribute parts of the image to appropriate processes. 
+This ensures satisfactory performance and scaling characteristics, a discussion of which is presented in the later parts of the report.
+
+This implementation of the problem solution does not try to make the code more advanced than what is required. 
+Instead, we focused on making sure we have created a complete, working and tested code. 
+We have put a lot of thought in the comments, code structure and documentation tools used, thus aiming to make this code easily understandable and modifiable by others. We firmly believe that great achievements come not only from individual brilliance, but from cooperation between people.
+
+As we aimed for the code to resemble a real-life software project as closely as possible, the code and all of its history is available as a \texttt{git} repository on \href{https://github.com/mkawalec/5thyear/tree/master/mpp/MPP-casestudy}{github}. A reader is encouraged to see the code history to understand how certain ideas came to being and to better understand the evolution of code structure to a present form.
 
 \section{Pre-implementation considerations}
 \subsection{Programming model}
