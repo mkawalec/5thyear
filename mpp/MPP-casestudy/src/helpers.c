@@ -2,6 +2,7 @@
 #include <mpi.h>
 #include <limits.h>
 #include <math.h>
+#include <stddef.h>
 
 #include "helpers.h"
 

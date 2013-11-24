@@ -10,6 +10,7 @@
 #define comm_h
 
 #include <mpi.h>
+#include <stddef.h>
 
 /** 
  *  @brief              Performs a 2D scatter of input to receive_buffer over 

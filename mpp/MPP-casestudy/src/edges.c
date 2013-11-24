@@ -3,6 +3,7 @@
 #include <mpi.h>
 #include <string.h>
 #include <omp.h>
+#include <stddef.h>
 
 #include "pgmio.h"
 #include "arralloc.h"

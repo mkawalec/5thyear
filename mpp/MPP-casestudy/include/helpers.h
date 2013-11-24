@@ -10,6 +10,7 @@
 #define helpers_h
 
 #include <mpi.h>
+#include <stddef.h>
 
 /**
  *  @brief A simple pair containing two elements.

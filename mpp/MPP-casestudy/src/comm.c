@@ -3,6 +3,7 @@
 
 #include <mpi.h>
 #include <stdlib.h>
+#include <stddef.h>
 
 void my_scatter(float *input, size_t dim_x, size_t dim_y, MPI_Comm communicator,
                 float **receive_buf, size_t *receive_x, size_t *receive_y)
