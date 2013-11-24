@@ -149,4 +149,13 @@ struct pair get_decomposition_size(size_t dim_x, size_t dim_y, int comm_size);
  */
 float compute_max_change(float **old, float **new, size_t dim_x, size_t dim_y);
 
+/**
+ *  @brief          Computes a hash for an image with a property that
+ *                  similar images will have similar hashes.
+ *  @param buffer   an array of floats containing an image
+ *  @param length   the length of buffer
+ *  @return         image hash
+ */
+unsigned long long hash(float *buffer, int length);
+
 #endif

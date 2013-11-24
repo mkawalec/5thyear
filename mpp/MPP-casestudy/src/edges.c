@@ -177,6 +177,8 @@ int main(int argc, char *argv[])
         pgmwrite("output.pgm", masterbuf, dim_x, dim_y);
         printf("Total time taken with %d processes: %lf s\n", 
                 process_count, omp_get_wtime() - start_time);
+
+        printf("The image hash is: %lld\n", hash(masterbuf, dim_x * dim_y));
     }
     MPI_Finalize();
 

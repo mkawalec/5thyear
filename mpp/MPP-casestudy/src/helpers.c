@@ -191,3 +191,18 @@ float compute_max_change(float **old, float **new, size_t dim_x, size_t dim_y)
 
     return max_change;
 }
+
+unsigned long long hash(float *buffer, int length)
+{
+    unsigned long long value = 0;
+    srand(123);
+
+    int i;
+    for (i = 0; i < length / 100; ++i) {
+        int index = rand()%length;
+        value += buffer[index] * rand();
+    }
+
+    return value;
+}
+   
