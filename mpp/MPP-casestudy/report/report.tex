@@ -1,7 +1,7 @@
 \documentclass[11pt,a4paper]{article}
 
 \usepackage{color,graphicx,listings,wrapfig,hyperref}
-\usepackage[margin=2cm]{geometry}
+\usepackage[margin=2cm,a4paper]{geometry}
 
 \graphicspath{{./img/}}
 
@@ -24,20 +24,36 @@ As we aimed for the code to resemble a real-life software project as closely as 
 
 \section{Pre-implementation considerations}
 \subsection{Programming model}
+From the outset, we aimed to make the code as simple and as readable as possible.
+The three main ways in which the program could be structured we considered where: writing a monolithic code with everything in a main function, branching out the most commonly used operations into separate functions or creating a library that could be used by the main function that would hide complexity inside the library itself.
+The first option was excluded right away, as it leads to creation of a so called ``spaghetti code'' making understanding by others and subsequent code modifications exponentially harder as the developement time progresses. By making the program hard to read it also encourages errors that are easy to avoid in a properly compartmentalised code and after a certain point it is impossible for the human brain to keep track of track dependencies between different program parts.
+
+Both second and third way of structuring a \texttt{C} program have merit in various circumstances, and we decided to strike a balance between them. 
+The most commonly used operations are branched into functions put in other source files, presenting an interface similar to functions provided by \texttt{MPI}.
+The interface is kept program-specific though, as we decided that complete versatility (as provided by \texttt{MPI}) is neither needed nor desirable in this case. 
+By keeping the interaction with functions specific to a problem at hand, we made it easy to apply our solution to a similar problem, at the same time making it quite simple to modify the code to enable, for instance, working on different data types.
+
+Thus the structure we arrived at has an \texttt{main} function performing operations the exact implementation of which is left for external functions to define. Such a solution makes it easy to reason about the code on the higher level encapsulating the complexity in layers of abstraction.
+
 % Some stuff about using a similar api to MPI, but
 % different, to accommodate for different usage
-\subsection{Choosing a decomposition algorithm}
-% We want an algorithm 'good enough'
 \subsection{Build system and documentation}
-% Cmake and doxygen
+We have decided to use a widely tested and versatile build system and as such an obvious choice was the \texttt{GNU Make}. 
+It would definitely suffice in the most simple of use cases, but it has several drawbacks. 
+Most notably, there would be no easy and built-in way of switching between different \texttt{MPI} implementations. 
+We wanted something more versatile and as such we chose \texttt{cmake}. It enables simple, automatic use of various \texttt{MPI} implementations through the supplied find scripts. As it is also very easy to run documentation generating programs with, it was a good first choice.
+
+For documentation generation, we used \texttt{Doxygen}. It is a de facto standard for \texttt{C}/\texttt{C++} documentation creation and generation. It is also easy to use and files documented in \texttt{Doxygen}-compatible way can easily be read raw or a generated HTML documentation can be viewed for added clarity and features provided by \texttt{Doxygen}.
 \subsection{Testing}
-% Decided not to use unittests, why
+After considering various options, we decided not to use a unit-testing framework. This has certain disadvantages, but we assumed that given a small project size and simple operations applied, the vast majority of errors will originate from the interprocess communication and decomposition algorithms. We discovered during implementation phase that we were not mistaken. 
 
 \section{Implementation}
 % The rationale for using a soft 80-char limit and the style used
 \subsection{Dealing with complexity}
 % Using arralloc, putting other functions in helpers.h
 % descriptive function names
+\subsection{Choosing a decomposition algorithm}
+% We want an algorithm 'good enough'
 \subsection{Communication model}
 % Why issend and not Ibsend, why blocking receives, how deadlock is avoided
 \subsection{Memory management}
@@ -45,6 +61,7 @@ As we aimed for the code to resemble a real-life software project as closely as 
 \section{Results}
 % A quick summary of results
 \subsection{Scaling properties}
-\subsection{Corectness checking}
+\subsection{Correctness checking}
+\subsection{Issues with compilation on cplab machines}
 
 \end{document}
