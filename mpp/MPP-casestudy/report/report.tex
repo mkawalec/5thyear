@@ -1,0 +1,40 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{color,graphicx,listings,wrapfig}
+\usepackage[margin=2cm]{geometry}
+
+\graphicspath{{./img/}}
+
+\begin{document}
+\title{Report from Message Passing Programming}
+\author{c02f-32d66e}
+\maketitle
+
+\section{Introduction}
+
+\section{Pre-implementation considerations}
+\subsection{Programming model}
+% Some stuff about using a similar api to MPI, but
+% different, to accommodate for different usage
+\subsection{Choosing a decomposition algorithm}
+% We want an algorithm 'good enough'
+\subsection{Build system and documentation}
+% Cmake and doxygen
+\subsection{Testing}
+% Decided not to use unittests, why
+
+\section{Implementation}
+% The rationale for using a soft 80-char limit and the style used
+\subsection{Dealing with complexity}
+% Using arralloc, putting other functions in helpers.h
+% descriptive function names
+\subsection{Communication model}
+% Why issend and not Ibsend, why blocking receives, how deadlock is avoided
+\subsection{Memory management}
+
+\section{Results}
+% A quick summary of results
+\subsection{Scaling properties}
+\subsection{Corectness checking}
+
+\end{document}
