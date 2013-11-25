@@ -131,6 +131,9 @@ int get_most_loaded(struct Chunk *chunks, int nthreads)
     return most_loaded;
 }
 
+/** @brief  Runs a loop with an affinity scheduler over a selected
+ *          number of threads.
+ */
 void runloop(int loopid)  
 {
     /* The total number of threads is acquired in this slightly odd 
@@ -157,6 +160,7 @@ void runloop(int loopid)
      */
     struct Chunk chunks[nthreads];
     omp_lock_t chunk_locks[nthreads];
+
 
     size_t i;
     for (i = 0; i < nthreads; ++i) omp_init_lock(&chunk_locks[i]);

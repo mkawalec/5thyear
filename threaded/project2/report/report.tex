@@ -1,7 +1,8 @@
 \documentclass[11pt,a4paper]{article}
 
-\usepackage{color,graphicx,listings,wrapfig}
+\usepackage{color,graphicx,listings,wrapfig,hyperref,algpseudocode,algorithm}
 \usepackage[margin=2cm]{geometry}
+\usepackage[toc,page]{appendix}
 
 \graphicspath{{./img/}}
 
@@ -15,5 +16,139 @@
 
 An implementation is presented in this report along with a detailed argument for its correctness and some discussion of reasons for the observed performance. The performance of this new scheduler, called \texttt{affinity} scheduler, is compared with the best scheduler for the same code determined in the first report. A brief comparison between different compilers is made and certain avenues for improvement are summarily suggested, but not investigated in depth.
 
-\section{Pre-implementation considerations}
+\subsection{Definition of affinity scheduler}
+The affinity scheduler tries to strike a balance between \texttt{dynamic} and \texttt{static} scheduling methods. 
+It first divides the number of iterations evenly among processes and makes each process compute its own iterations first.
+The number of iterations computed every run of the scheduler is inversely proportional to the number of iterations left in the pool of iterations threads.
+Then once there are no iterations left in the current thread pool the thread ``steals'' iterations from the most loaded thread.
+It is an improvement over the \texttt{dynamic} scheduler, as the overhead from thread synchronisation is omitted until later in the computation and on \texttt{static} as threads can share cycles between each other thus making computation in all but the simplest cases more efficient.
+
+There are certain improvements to this scheduler that could be proposed almost immediately. For instance initially the workload could be divided between threads in a different proportion, which could help with some problems. 
+Or the amount of iterations computed every scheduler run could be calculated in different way than inverse-proportionally to the number of iterations left in the pool.
+Regardless of the possible improvements that could be made to the way the algorithm works, it was not our task to improve the affinity scheduler, and we will not develop these ideas further in this report nor in the code.
+
+\section{Compiler, build system, style}
+We have used the \texttt{gcc} compiler to compile the code we ran in parallel.
+One could argue that it was not the best choice, as the Portland family of compilers offer performance that is even orders of magnitude better than what is provided by the \texttt{gcc}. 
+This is correct, but we are limited in the compiler choice by the compiler we have chosen in the first report, which was \texttt{gcc}. 
+Therefore when reading the performance results in the later parts of the report one must keep in mind that much better performance is readily possible by using a different compiler. 
+Since what we aim for is a comparison between the built-in schedulers and the affinity scheduler developed by us we needed to use the same compiler for the old and new runs giving us no other choice but to use \texttt{gcc}.
+
+\subsection{Build system}
+We considered using a different build system than just simple \texttt{GNU Make}, but we concluded it would not bring any benefit in this particular case. 
+We don't need to have the code compilable under different architectures and compilers, it is enough for the code to be able to compile under Linux and \texttt{gcc}. 
+Because of that \texttt{cmake} or \texttt{ant} would not bring any benefits to the compilation process in our use case adding additional unneeded dependencies. 
+
+Makefiles have additional advantage though, which is their syntax. 
+It can be in many cases confusing, impractical and lacking in many modern features many of developers are used to.
+We feel that as much as it would be an issue in a bigger project, in our case of one file needing compilation these hurdles can be easily overcome.
+
+\subsection{Style}
+It is our preference to use the \href{https://www.kernel.org/doc/Documentation/CodingStyle}{Linux Kernel coding style}, with certain modifications. 
+We feel that indenting by four spaces is more practical than eight-space indentation. 
+We have also not modified the style of the parts of the code present before our modifications.
+This can create a feeling of a certain disparity between these two code parts, but we feel it fits more closely to a real scenario where it is impractical (and possibly unwanted) to modify a big codebase which style is different from a coding style used for modifications.
+Of course a most optimal case all the projects should aim at would be to use a uniform style throughout the whole project.
+In this case though, we feel that such a style difference does not make the code less readable and is warranted.
+
+We use \texttt{Doxygen}-compatible comments to describe function behaviour where appropriate. 
+Routines to generate the actual documentation out of the source file were not provided, as they can be trivially added as needed.
+We have not added comments to the code parts provided for the assignment that were not modified as this was not required.
+
+\section{Implementation}
+In the implementation of the affinity scheduler we preferred to use simpler solutions in places where more sophisticated ones would provide marginal performance benefits.
+Such an approach has a marked benefit of simplifying the source thus making it less bug-prone and easier to comprehend.
+Of course in certain places simpler algorithms have performance impact that cannot be tolerated but we identify such bottlenecks, in most places, by routine profiler usage thus applying the optimisations with an evidence-based strategy.
+
+\begin{algorithm}
+    \caption{Affinity scheduler}\label{aff_src}
+    \begin{algorithmic}[1]
+        \State set up locks and chunk boundaries
+
+        \While{1}
+            \State set a lock on current threads' chunks
+            \If{iterations available in current threads' pool}
+                \State claim iterations
+                \State release the lock on current threads' chunks
+            \ElsIf{it is possible to ``steal'' iterations from a thread}
+                \State release the lock on current threads' chunks
+                \State set a lock on a most loaded threads' chunks
+                \State claim iterations from a most loaded thread
+                \State release lock on the most loaded threads' chunks
+            \Else
+                \State release lock on the current threads' chunks
+                \State \textbf{break}
+            \EndIf
+
+            \If{iterations\_start = iterations\_end}
+                \State \textbf{continue}
+            \EndIf
+
+            \State launch a correct loop
+        \EndWhile
+    \end{algorithmic}
+\end{algorithm}
+
+\subsection{Affinity scheduling algorithm dissection}
+\subsubsection{Data structures used}
+For keeping track of the iteration ranges left to be computed by different threads we use an array that is as long as the number of threads. 
+An entry in that array is a pair of numbers (wrapped in a \texttt{C} struct) that specify the beginning of the computation range and its end + 1. 
+By keeping the first iteration that is not in the range assigned to current thread we make it more convenient to use this number in loops where one most commonly requires and iterator to be smaller than some value as checking for equality may lead to certain hard to find bugs\footnote{This is especially true with floating point numbers as equality checking in meaningless with them. It is less true with integer types used in this case, but it is a good habit to use ``less than'' instead of ``equals'' sign in loops.}.
+
+There are other schemes that could be employed here. 
+One could keep beginnings of a range in one array and the ends in another or not use a struct and remember that even numbers denote starts of a range and odd their ends. 
+All the other ways of keeping this data that we considered have in common is making it harder to understand the meaning of the data while reading and writing the program, and at the same time not providing any performance benefit.
+Consequently, we decided to use the scheme described above for holding the iteration ranges.
+
+\paragraph{Data consistency}
+Using just an array as described above is problematic when the same array is accessed by multiple threads.
+Two writes occurring at the same time or a write happening with a read from another thread introduce a race condition that has to be avoided.
+Main schemes that could be employed for dealing with this race condition would be: performing reads and writes inside a critical section, using one lock for the whole array or using an array of locks for each element in the array.
+
+The first two solutions are equivalent and share the same drawbacks. 
+The overhead of essentially locking the whole array every time any read or write involving it is attempted would increase with increasing number of threads leading to a very unpleasant situation of threads spending a large part of their time waiting for array access.
+Memory savings could be named as a reason to use a single lock, but even on severely memory-starved systems the size of multiple locks (four bytes per lock) would not be an impediment to implementation.
+
+Because of the above considerations we used an array of locks, one lock corresponding to each process and thus the iteration range.
+Care needs to be exercised while accessing the array of iteration ranges, as a proper lock needs to be set every time an iteration range is read from or written to.
+Setting a lock before reading from the iteration ranges array (called \texttt{chunks} from now on) must happen as it is undesirable to have a write operation happening at the same time as a read.
+Without locking \texttt{chunks} before a read it would be impossible to protect against this kind of a race condition.
+
+\subsubsection{In-detail operation}
+\paragraph{Initial setup}
+This paragraph describes all the operations that happen at line 1 in Algorithm~\ref{aff_src}.
+At first the \texttt{chunks} array and the corresponding locks arrays are allocated on the stack. 
+Then the locks are initialized to be in an unset stage.
+It is an important stage, without it the locks would be in undefined state with some parts of \texttt{chunks} permanently locked.
+
+Then the parallel part begins with each thread setting its own chunk (iteration) boundaries without applying any locks.
+Consistency of this operation is achieved though a \texttt{barrier} at the end of the chunk boundaries setting.
+Thus no locks need setting as we have a guarantee that no two threads will try to write to or read from different parts of the \texttt{chunks} array.
+
+\paragraph{Main scheduler loop}
+It is described on the lines 2 -- 20 in Algorithm~\ref{aff_src}. 
+The first condition, on line 4, depends on access to the \texttt{chunks} array and thus a lock on the item containing its iteration ranges is needed before the condition is checked.
+If there are any iterations left in the current threads' workload a proper amount of iterations is claimed and the lock is released.
+If there are no iterations left local to the current thread, the iterations are ``stolen'' from the most loaded thread (lines 7 -- 11).
+If there is any work left to be done in any of the threads ranges, the proper amount of iterations is claimed, with proper lock setting and releasing.
+For the discussion on the operation of a method for determining the most loaded thread please see Section~\ref{sec:most_loaded}.
+If there are no chunks to be ``stolen'' from any of the processes, it means that that there is no work this process can do and thus the main loop is stopped and the thread finishes execution.
+
+If the scheduler continues for the current thread, a correct loop is launched.
+
+\subsection{Finding a most loaded thread}
+The function finding a most loaded thread iterates through the whole \texttt{chunks} array to determine a most loaded thread.
+It does not use any kind of locking for two reasons. 
+First of all, we wanted this function to have as small a performance impact as possible as it is launched fairly often in later parts of the computation for unbalanced loops, such as loop 2.
+Using locking before each \texttt{chunks} read would hurt performance, substantially increasing computation time for higher processor counts.
+
+Furthermore the only modifications possible to the chunks array after the initial initialization are increases of the starting point of each iteration range containing struct. 
+This means that the only error that can be made by the function finding the most loaded thread is to point to a thread that was recently the most loaded thread. 
+It has minimal effect on performance if this error is made, as 
+
+\subsubsection{Other schemes for determining the most loaded thread}
+% Making lookup O(1), but updating the most loaded inside a crit region
+
+\label{sec:most_loaded}
+
 \end{document}
