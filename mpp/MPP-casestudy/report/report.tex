@@ -13,67 +13,83 @@
 \maketitle
 
 \section{Introduction}
-Our task in this assignment was to use \texttt{MPI} library to build an image-transfroming parallel program.
-The program applies an iterative method of recovering an original image from an image containing a result of an edge detection algorithm applied to the original image. 
+Our task in this assignment was to build an image-transforming parallel program with the \texttt{MPI library}.
+The program applies an iterative method of recovering an original image from an image containing a result of an edge detection algorithm. 
 To enable more efficient use of resources, our program uses a 2D image decomposition to distribute parts of the image to appropriate processes. 
-This ensures satisfactory performance and scaling characteristics, a discussion of which is presented in the later parts of the report.
+This ensures better performance and scaling characteristics than what would be available from a simple one-dimensional version, a discussion of which is presented in the later parts of the report.
 
 This implementation of the problem solution does not try to make the code more advanced than what is required. 
-Instead, we focused on making sure we have created a complete, working and tested code. 
-We have put a lot of thought in the comments, code structure and documentation tools used, thus aiming to make this code easily understandable and modifiable by others. We firmly believe that great achievements come not only from individual brilliance, but from cooperation between people.
+Instead, we focused on ensuring we have created a complete, working and thoroughly tested code. 
+We have put a lot of thought in the comments, code structure and documentation tools used, thus aiming to make the program easily understandable and modifiable by others. 
+We firmly believe that great achievements come not only from individual brilliance, but from cooperation between people.
 
-As we aimed for the code to resemble a real-life software project as closely as possible, the code and all of its history is available as a \texttt{git} repository on \href{https://github.com/mkawalec/5thyear/tree/master/mpp/MPP-casestudy}{github}. A reader is encouraged to see the code history to understand how certain ideas came to being and to better understand the evolution of code structure to a present form.
+As we aimed for the code to resemble a real-life software project as closely as possible, the sources and all of their history is available as a \texttt{git} repository on \href{https://github.com/mkawalec/5thyear/tree/master/mpp/MPP-casestudy}{github}. The reader is encouraged to see the code history to understand how certain ideas came to being and to posses a better grasp of the evolution of its structure to a present form.
 
 \section{Pre-implementation considerations}
 \subsection{Programming model}
 \label{sec:model}
-From the outset, we aimed to make the code as simple and as readable as possible.
-The three main ways in which the program could be structured we considered where: writing a monolithic code with everything in a main function, branching out the most commonly used operations into separate functions or creating a library that could be used by the main function that would hide complexity inside the library itself.
-The first option was excluded right away, as it leads to creation of a so called ``spaghetti code'' making understanding by others and subsequent code modifications exponentially harder as the developement time progresses. By making the program hard to read it also encourages errors that are easy to avoid in a properly compartmentalised code and after a certain point it is impossible for the human brain to keep track of track dependencies between different program parts.
+The three main ways in which the program could be structured we considered where: writing a monolithic code that would contain all the logic in a main function, branching out the most commonly used operations into separate functions or creating a self-contained library that could be used by the main function and would hide complexity inside the library itself.
+The first option was excluded right away, as it quickly leads to creation of so called ``spaghetti code'' making understanding by others and subsequent code modifications exponentially harder as the development time progresses. 
+By making the program hard to read it also encourages errors that are easy to avoid in a properly compartmentalised code and after a certain point it is impossible for the human brain to keep track of track dependencies between different program parts.
 
 Both second and third way of structuring a \texttt{C} program have merit in various circumstances, and we decided to strike a balance between them. 
-The most commonly used operations are branched into functions put in other source files, presenting an interface similar to functions provided by \texttt{MPI}.
-The interface is kept program-specific though, as we decided that complete versatility (as provided by \texttt{MPI}) is neither needed nor desirable in this case. 
-By keeping the interaction with functions specific to a problem at hand, we made it easy to apply our solution to a similar problem, at the same time making it quite simple to modify the code to enable, for instance, working on different data types.
+The most commonly used operations are branched into functions put in other source files, presenting an interface similar, but not identical, to functions provided by \texttt{MPI}.
+The interface is kept program-specific, as we decided that complete versatility (as provided by \texttt{MPI}) is neither needed nor desirable in this project. 
+By keeping interaction with functions specific to a problem at hand, we created a clear and concise code.
+We also wrote the code in a way that would make it easy to apply our solution to a similar problem, at the same time making it quite simple to modify to enable, for instance, working on different data types.
 
-Thus the structure we arrived at has an \texttt{main} function performing operations the exact implementation of which is left for external functions to define. Such a solution makes it easy to reason about the code on the higher level encapsulating the complexity in layers of abstraction.
+Thus the structure we arrived at comprises of a \texttt{main} function performing operations the exact implementation of which is left for external functions to define. 
+In addition to advantages mentioned above, such an approach makes it easy to reason about the code on the higher level encapsulating the complexity in layers of abstraction.
 
-% Some stuff about using a similar api to MPI, but
-% different, to accommodate for different usage
 \subsection{Build system and documentation}
 We have decided to use a widely tested and versatile build system and as such an obvious choice was the \texttt{GNU Make}. 
 It would definitely suffice in the most simple of use cases, but it has several drawbacks. 
-Most notably, there would be no easy and built-in way of switching between different \texttt{MPI} implementations. 
-We wanted something more versatile and as such we chose \texttt{cmake}. It enables simple, automatic use of various \texttt{MPI} implementations through the supplied find scripts. As it is also very easy to run documentation generating programs with, it was a good first choice.
+Most notably, it would require additional configuration to build an \texttt{MPI} program on some platforms. 
+We wanted something more versatile and with clearer syntax as such we chose \texttt{cmake}. 
+It enables seamless use of various \texttt{MPI} implementations through the supplied find scripts. 
+As it is also very easy to run documentation generating programs with, it was a good first choice.
 
-For documentation generation, we used \texttt{Doxygen}. It is a de facto standard for \texttt{C}/\texttt{C++} documentation creation and generation. It is also easy to use and files documented in \texttt{Doxygen}-compatible way can easily be read raw or a generated HTML documentation can be viewed for added clarity and features provided by \texttt{Doxygen}.
+For documentation generation, we used \texttt{Doxygen}. 
+It is a de facto standard for \texttt{C}/\texttt{C++} documentation creation and generation. 
+It is also easy to use and files documented in \texttt{Doxygen}-compatible way can easily be read raw or a generated documentation in any format can be viewed for added clarity and features.
+
 \subsection{Testing}
-After considering various options, we decided not to use a unit-testing framework. This has certain disadvantages, but we assumed that given a small project size and simple operations applied, the vast majority of errors will originate from the interprocess communication and decomposition algorithms. We discovered during implementation phase that we were not mistaken. 
+After considering various options, we have decided not to use a unit-testing framework. 
+This has certain drawbacks, but we assumed that given a small project size and simple operations applied, the vast majority of errors will originate from the interprocess communication and decomposition algorithms. 
+We discovered during implementation phase that we were not mistaken. 
+
+This in itself is not an argument against writing unit tests -- we could, after all, implement tests that check the correctness of decomposition algorithms.
+We chose not to, as considerable time and effort would be exerted implementing tests that would only be practically needed if the program had prospects of further development and future growth, which it does not.
 
 \section{Implementation}
 \subsection{Style}
-While writing the program we followed the \href{https://www.kernel.org/doc/Documentation/CodingStyle}{Kernel Coding Guidelines} when it comes to formatting the code, with a few modifications. 
-We felt that 80 characters in a line is a better limit on line width and that indenting by four spaces is more readable than an eight-space indentation. 
+While writing the program we followed the \href{https://www.kernel.org/doc/Documentation/CodingStyle}{Kernel coding guidelines} when it comes to formatting the code, with a few modifications. 
+We felt that 80 characters in a line is a better limit on line width and that indenting by four spaces is more readable than an eight-space option suggested by the guide. 
 
-We preferred to put logically related code in the same file and to keep a length of each file under five hundred lines, to help readability and collaboration. 
-The limit on file length was never reached, as it is a relatively small project, but it is always good to keep it in mind when writing the code.
+We preferred to put functionally related code in the same file and to keep the length of each file under five hundred lines if possible, to help readability and collaboration. 
+The limit on file length was never reached as it is a relatively small project, but it is always good to be kept in mind when writing code.
 In the end the codebase had evolved to span five source files and four headers with functions in different files having distinctly different applications.
 
 \subsection{Data structures used}
 There are three main data structures in use in the program and we will examine them one by one.
-Examination of usage scenarios for the following structures can be found in subsequent sections, most notably in~\ref{sec:2dscatgat}.
+Exploration of usage scenarios for the following structures can be found in subsequent sections, most notably in~\ref{sec:2dscatgat}.
 
 \subsubsection{Master buffer}
-It is a simple array of floats to which the input file is read and the output is written from. The scatter and gather operations also use the master buffer as a source or a target, respectively. It contains enough elements to contain information about every pixel of the input image and no more. There are no halos allocated in the master buffer as they are not of its concern. The master buffer is only allocated on the master thread (the one with id 0), which in theory enables the whole program run on machines without enough memory to contain the whole image (with the exception of the machine running process zero, of course).
+It is a simple array of floats to which the input file is read and the output is written from. 
+The scatter and gather operations also use the master buffer as a source or a target, respectively. 
+It contains enough elements to convey information about every pixel of the input image and no more. 
+There are no halos allocated in the master buffer as they are not of its concern. 
+The master buffer is only allocated on the master thread (the one with id 0), which enables the program to run on machines without enough memory to contain whole of the input image (with the exception of the machine running process zero, of course).
 
 \subsubsection{Process-local data buffer and 2D arrays}
-The data buffer called \texttt{buf} in the program code is used as an intermediate structure to which the data is sent by the scatter function and taken by gather. It is a 1D array of floats that contains the exact amount of elements as the number of pixels in the image part sent to a given process. 
+A buffer called \texttt{buf} in the program code is used as an intermediate structure to which the data is sent to by the scatter function and taken from by gather. 
+It is a 1D array of floats that contains the same amount of elements as the number of pixels in the image part sent to a given process. 
 
-The three 2D arrays, \texttt{edge}, \texttt{new} and \texttt{old} contain intermediate computation state and are contain the halos, that is a border one pixel wide along the image data. The halos in the border are swapped with adjacent processes every iteration and the inner elements are updated by the transformation loop.
+Three 2D arrays, \texttt{edge}, \texttt{new} and \texttt{old} contain intermediate computation state and the halos, that is a border one pixel wide on edges of the image data. The halos in the border are swapped with adjacent processes every iteration and the inner elements are updated by the transformation loop.
 
 \subsection{2D decomposition algorithm}
 \label{sec:2ddec}
-Choosing one algorithm over another is always a trade-off between implementation complexity, performance and correctness. We have decided to use a simple to implement algorithm that chooses the most efficient decomposition for most cases and when it does not it refuses to continue. The pseudo code version of the decomposition algorithm is presented as Algorithm~\ref{2dcomp}.
+Choosing one algorithm over another is always a trade-off between implementation complexity, performance and correctness. We have decided to use a simple to implement algorithm that chooses the most efficient decomposition for most cases and when it does not it indicates that. The pseudo-code version of the decomposition algorithm is presented as Algorithm~\ref{2dcomp}.
 
 \begin{algorithm}
     \caption{2D decomposition algorithm}\label{2dcomp}
@@ -91,28 +107,53 @@ Choosing one algorithm over another is always a trade-off between implementation
     \end{algorithmic}
 \end{algorithm}
 
-After the algorithm completes, $result$ will contain the number of chunks in the Y dimension in the most efficient decomposition. The number of divisions in the X dimension is trivially computed as $commsize / result$. This algorithm uses a $circumference$ method that returns a total circumference for a given number of divisions in Y direction. The total circumference is a measure that is proportional\footnote{Total circumference as defined in this implementation is proportional but slightly higher than the total amount of data exchanged in a simulation step as it also includes the ``edges'' of a halo, which are not sent.} to a complete amount of data that needs to be exchanged in one simulation step and needs to be minimised for a most efficient decomposition. 
+After the algorithm completes, $result$ will contain the number of chunks in the Y direction of the most efficient decomposition. 
+The number of elements in the X dimension is trivially computed as $ceil(commsize / result)$. 
+This algorithm uses a $circumference(i)$ method that returns a total circumference for a given number of divisions in Y direction. 
+The total circumference is a measure that is proportional\footnote{Total circumference as defined in this implementation is proportional but slightly higher than the total amount of data exchanged in a simulation step as it also includes the ``corners'' of a halo, which are not sent.} to a complete amount of data that needs to be exchanged in one simulation step and needs to be minimised for a most efficient decomposition. 
 
-In case the number of chunks in any direction does not divide the number of pixels in that direction evenly, the chunks most to the right (in case of X unevenness) or to the bottom will be smaller. It is a reasonable trade-off to make, as in most cases the difference in size between those side chunks and the inner ones will be minimal in all but the most malformed cases. In exchange we get a straightforward algorithm producing the chunks.
+In case the number of chunks in any direction does not divide the number of pixels in that direction evenly, the chunks most to the right (in case of X unevenness) or to the bottom will be smaller. 
+It is a reasonable trade-off to make, as in most cases the difference in size between those side chunks and the inner ones will be minimal in all but the most malformed cases. 
+In exchange we get a straightforward algorithm producing the chunks.
 
-The algorithm, or rather the way it is used in this code, has one issue that is not immediately obvious and produces serious consequences at certain times. If we try to divide an image of a size 768 by 1152 pixels into 59 chunks, the algorithm says we should have 59 chunks in Y direction of the length of the whole of X. We then proceed to divide 1152 by 59 to get the height of a chunk in pixels and we get $\approx 19.53$. This gives us two choices - either have the chunks of height of 19 or 20. But if we choose 19, $1152 / 19\approx 60$ and if 20, $1152 / 20\approx 58$! So in neither of the two cases we get the correct number of chunks.
+The algorithm, or rather the way it is used in this code, has one issue that is not immediately obvious and produces serious consequences at certain times. 
+If we try to divide an image of a size 768 by 1152 pixels into 59 chunks, the algorithm says we should have 59 elements in Y direction and one in X as 59 is a prime number. 
+We then proceed to divide 1152 by 59 to get the height of a chunk in pixels and we get $\approx 19.53$. 
+This leaves us with two choices -- either have the chunks 19 or 20 pixels high. But if we choose 19, $1152 / 19\approx 60$ and if 20, $1152 / 20\approx 58$! So in neither of the two cases we get the correct number of chunks.
 
-This issue can of course be solved if we give the program the freedom to make the last chunk much bigger (or smaller), but such functionality was not implemented, as it would increase code complexity. Additionally, it only comes into play for certain uncommon numbers of launched processes, and if such a situation occurs the program finishes with an error and refuses to continue.
+This issue can of course be solved if we give the program the freedom to make the last chunk row or column much bigger (or smaller) than the inner chunks, but such functionality was not implemented as it would increase code complexity and lead to poorer performance. 
+Additionally, it only comes into play for certain uncommon numbers of created processes, and if such a situation occurs the program can notice it and will refuse to continue.
 
 \subsection{2D scatter/gather}
 \label{sec:2dscatgat}
-We decided to have the 2D scatter and gather callable in a similar way the original \texttt{MPI} methods are called. The different behaviour for different ranks is hidden inside the body of the scatter and gather functions so that their user (be that another person or just the \texttt{main} function) calls them the same way from all the processes. We have omitted both the file type specification and indication of which process has the data to be scattered from the function call, as we feel that this loss of generality from the function call pays back with increased simplicity. 
+We decided to implement our 2D scatter and gather routines which would be callable in a similar way to the original \texttt{MPI} methods. 
+The different behaviour for different ranks is hidden inside the body of the scatter and gather functions so that their user (be that another person or just the \texttt{main} function) calls them the same way from all the processes. 
+We have omitted both the file type specification and indication of which process has the data to be scattered from the function call, as we feel that this loss of generality pays back with increased simplicity. 
 
-A case could be made that this makes those functions that are quite general in nature very problem-specific, but we do not think that is a problem. If a greater generality would be needed (for instance for a 2D decomposition of a different data type or from a different process) a simple change can be made that would enable either of these functions to accept different data types or sources. But since these functions will only be used in this specific problem and no extensions are planned to the codebase omitting these arguments only brings advantages from simplicity.
+A case could be made that this makes those functions that are quite general in nature very problem-specific, but we do not think that is a problem. 
+If a greater generality would be needed (for instance for a 2D decomposition of a different data type or from a different process) a simple change can be made that would enable either of these functions to accept different data types or sources. 
+But since these functions will only be used in this specific problem and no extensions are planned to the codebase omitting these arguments only brings advantages from simplicity.
 
 \subsubsection{Scatter algorithm analysis}
-The scatter algorithm pseudocode is presented as Algorithm~\ref{2dscat}. It is very straightforward when presented in this form. First, an optimal decomposition is determined (line 1). Then, if the current process is a sending process, appropriate regions of the send buffer are sent to correct processes (lines 5 -- 11) in a non-blocking way. Then the data is received by a target process to a receive buffer and inverted. In the end, the receiving process waits until all the sending operations finish before starting (lines 15 -- 16).
+The scatter algorithm pseudocode is presented as Algorithm~\ref{2dscat}. 
+It is very straightforward when presented in this form. First, an optimal decomposition is determined (line 1). 
+Then, if the current process is a sending process, appropriate regions of the send buffer are sent to correct processes (lines 5 -- 11) in a non-blocking way. 
+Then the data is received by a target process to a receive buffer and inverted. In the end, the receiving process waits until all the sending operations finish before starting (lines 15 -- 16).
 
-Two issues warrant increased attention here. First of all, the \texttt{invert} function inverts the contents of the buffer vertically. It is needed, as the 2D topology generated by \texttt{MPI} uses process indexing which is the same as \texttt{C} array indexing with inverted Y axis. Without the invert operation on line 14 the user would need to send the upper halo to the bottom neighbour and the bottom halo to upper neighbour. We assumed that it would be better to shield the user of this function from this inconvenience and simply invert the data inside the scatter algorithm itself. 
+Two issues warrant increased attention here. 
+First of all, the \texttt{invert} function inverts the contents of the buffer vertically. 
+It is needed, as the 2D topology generated by \texttt{MPI} uses process indexing which is the same as \texttt{C} array indexing with inverted Y axis. 
+Without the invert operation on line 14 the user would need to send the upper halo to the bottom neighbour and the bottom halo to upper neighbour. 
+We assumed that it would be better to shield the user of this function from this inconvenience and simply invert the data inside the scatter algorithm itself. 
 
-Secondly, the usage if \texttt{MPI\_Issend} instead of other send methods requires explanation. The usage of Bsend in this place would not bring about any benefits to the program, as the buffer that needs to be allocated would need to be the size of the data being sent. That is not acceptable, as the program may deal with very large input data and there may not be enough memory available for allocation. Additionally, we do not want the master process to complete before all the requests have completed. Because of both of this disadvantages and no advantages, we have decided to use \texttt{MPI\_Issend}.
+Secondly, the usage if \texttt{MPI\_Issend} instead of other send methods requires explanation. 
+The usage of Bsend in this place would not bring about any benefits to the program, as the buffer that needs to be allocated would need to be the size of the data being sent. 
+That is not acceptable, as the program may deal with very large input data and there may not be enough memory available for allocation. 
+Additionally, we do not want the master process to complete before all the requests have completed. 
+Because of both of this disadvantages and no advantages, we have decided to use \texttt{MPI\_Issend}.
 
-We have not chosen ``Standard send'' as we want to have more control over over how the data is sent than what this function allows. The ``Ready send'' mode was not even briefly considered, as it would provide ephemeral gains in this scenario while making is much harder to write a correct program.
+We have not chosen ``Standard send'' as we want to have more control over over how the data is sent than what this function allows. 
+The ``Ready send'' mode was not even briefly considered, as it would provide ephemeral gains in this scenario while making is much harder to write a correct program.
 \begin{algorithm}
     \caption{2D scatter algorithm}\label{2dscat}
     \begin{algorithmic}[1]
@@ -140,9 +181,13 @@ We have not chosen ``Standard send'' as we want to have more control over over h
 \end{algorithm}
 
 \subsubsection{Gather algorithm analysis}
-The Gather algorithm is very similar in principle to the scatter algorithm provided above and thus we feel that providing it here in form of pseudo-code would be redundant -- interested readers should see the source code. The main conceptual difference between gather and scatter is the direction of data transfer. The small parts of the data are inverted and sent by all the processes to the 0th process. Then they are assembled in correct places in the master buffer and the gather is complete.
+The Gather algorithm is very similar in principle to the scatter algorithm provided above and thus we feel that providing it here in form of pseudo-code would be redundant -- interested readers should see the source code. 
+The main conceptual difference between gather and scatter is the direction of data transfer. 
+The small parts of the data are inverted and sent by all the processes to the 0th process. 
+Then they are assembled in correct places in the master buffer and the gather is complete.
 
-We do not use non-blocking receive routines as we feel that a slight speed boost achieved by them is easily offset by simpler and less bug-prone gather code. This is especially true as Gather is ran only once per program run and so using blocking receives adds only minimal cost.
+We do not use non-blocking receive routines as we feel that a slight speed boost achieved by them is easily offset by simpler and less bug-prone gather code. 
+This is especially true as Gather is ran only once per program run and so using blocking receives adds only minimal cost.
 % As can be seen in VAMPIR, the time spent on gather is minimal (7ms) (initial scatter takes less than 13ms)
 \subsection{Main program loop}
 \subsection{Ensuring correctness}
