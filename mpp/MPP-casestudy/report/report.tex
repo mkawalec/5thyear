@@ -132,7 +132,7 @@ We have omitted both the file type specification and indication of which process
 
 A case could be made that this makes those functions that are quite general in nature very problem-specific, but we do not think that is a problem. 
 If a greater generality would be needed (for instance for a 2D decomposition of a different data type or from a different process) a simple change can be made that would enable either of these functions to accept different data types or sources. 
-But since these functions will only be used in this specific problem and no extensions are planned to the codebase omitting these arguments only brings advantages from simplicity.
+But since these functions will only be used in this specific problem and no extensions are planned to the codebase, omitting these arguments only brings advantages from simplicity.
 
 \subsubsection{Scatter algorithm analysis}
 The scatter algorithm pseudocode is presented as Algorithm~\ref{2dscat}. 
@@ -187,13 +187,73 @@ The small parts of the data are inverted and sent by all the processes to the 0t
 Then they are assembled in correct places in the master buffer and the gather is complete.
 
 We do not use non-blocking receive routines as we feel that a slight speed boost achieved by them is easily offset by simpler and less bug-prone gather code. 
-This is especially true as Gather is ran only once per program run and so using blocking receives adds only minimal cost.
-% As can be seen in VAMPIR, the time spent on gather is minimal (7ms) (initial scatter takes less than 13ms)
+This is especially true as Gather is ran only once per program execution. 
+Moreover the \texttt{VAMPIR} parallel trace tool reveals that adding blocking receives adds minimal overhead to the program execution, as the final gather operation takes less than 15ms with 16 threads.
+
 \subsection{Main program loop}
+After distributing the data across processes the main program loop is reached. It is composed of two parts, which we will discuss separately.
+
+\paragraph{Communicating state}
+Every certain number of iterations the program prints some information about its current state. 
+It tells the user what the current iteration is and the average pixel value at this iteration.
+Because the 0th thread is the one printing the information\footnote{It is guaranteed to exist, so it is a safe and simple choice of a printing thread. Additionally it has the most work to do, as it has to scatter and gather image data and would usually be the last thread to reach a certain stage.} the information about the average pixel value is reduced to it. 
+In order to reduce rounding errors and the need for the 0th thread to know dimensions of image part each thread works on, the \texttt{MPI\_Reduce} operation sums values of every pixel in the image.
+This way the average value is the total sum divided by the number of pixels in an image, which can easily be computed.
+
+Our program must also run for a certain number of iterations and finish when image change every iteration is lower than a certain threshold.
+In order to perform this operation all processes must agree on when an appropriate stopping moment happens.
+To achieve that we use \texttt{MPI\_Allreduce} for computing a global maximum change between iterations coupled with a check by every process comparing the computed value to the threshold.
+If the computed change is smaller than the threshold, each of the processes finishes its main loop.
+
+\paragraph{Communication and image transformation}
+We use an immediately returning Standard Send for sending halo data that needs to be exchanged every iteration with adjacent processes.
+We then receive the data into appropriate halos of a current process and apply the transformation. 
+Only after doing that we require the send requests to complete using \texttt{MPI\_Wait}, which prevents deadlock and effectively exploits the asynchronous nature of send requests we are using.
+It also increases performance, as transformation can be applied to the image before the send requests complete.
+As much as we would like to delay synchronisation of send requests even further it is not possible while keeping an answer correct, as the state of an array from which data is sent changes dramatically.
+We swap an \texttt{old} array, which holds the previous iteration state with the \texttt{new} array holding the current state.
+As this operation changes the place in memory to which \texttt{old} points, integrity of the send operation cannot be ensured.
+
+To ensure clear definitions of ``upper'' and ``lower'' halos we employ a virtual datatype anchored at a different place in the array.
+Our partitioning scheme ensures that upper and lower neighbours of a process (determined with a help from \texttt{MPI} virtual topologies) have appropriate halos of the same size as a current process.
+
 \subsection{Ensuring correctness}
+The question of a correct result in a parallel setting is an inherently complex one. 
+How would one ensure a correct result when unpredictable events during communication can happen and when timing of operations is not guaranteed?
+We have eliminated a possibility of a deadlock arising from the way communication is structured completely, by using a combination of asynchronous sends and synchronous receives placed in a correct order.
+However, a deadlock arising from a hardware error of some sort is still possible and increases its probability as the program is scaled to more and more processors.
+It it very possible to protect against such an error in software, but it is way beyond of scope of the current assignment and thus this avenue is kept unexplored.
+
+\paragraph{Data hashing}
+Even though a deadlock is not possible, it still doesn't guarantee correctness of an answer.
+For that we employed a two-part scheme.
+After every run a probabilistic image hash is generated.
+Its value is then compared to a known hash value of a result which correctness can be inspected visually.
+
+The hash function we chose selects a certain number of pixels from the image at random, multiplies the values at the pixels by random numbers and outputs the result.
+Because a certain preselected seed is set at the beginning of the function run we have a guarantee that for the same image the hash value will be the same.
+Additional advantage of this scheme is that hashes of two similar images are similar.
+We thought that such property would be needed as we deal with floating point numbers and certain small errors would be inevitable.
+As it turned out no errors were observed.
+
+The reason why we choose the pixels creating the hash at random are not due to performance in this setting.
+We do it simply because \texttt{unsigned long long} is used for the hash value.
+\texttt{GCC} implementation of RNG uses a range from $0$ to $10^9$ for the generated numbers, so using all the pixels would cause an overflow in cache value.
+This also means that using the program with images that have more than 100 megapixels would cause a cache value overflow.
+This problem could be solved by using a library supporting unlimited precision numbers for expressing the cache value, or implementing this simple functionality ourselves.
+Again, such a functionality is outside of the scope of this project and was not realised in current code version.
+
+\label{sec:correctness}
 
 \section{Results}
-% A quick summary of results
+The results are presented here with lines depicting scaling properties of different solutions.
+Of course it is impossible to run a program on a non-integer number of processors so all the following plots must be interpreted with this in mind.
+Additionally, there are certain numbers of processors for which a decomposition is impossible using an algorithm described above.
+Such cases are omitted from the plots.
+Therefore, even if a straight line passes though a certain number of processors it does not mean that it is possible to run the program on this number of processors.
+
+
+
 \subsection{Scaling properties}
 \subsection{Correctness checking}
 \subsection{Issues with compilation on cplab machines}
