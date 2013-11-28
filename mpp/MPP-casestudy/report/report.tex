@@ -13,8 +13,8 @@
 \maketitle
 
 \section{Introduction}
-Our task in this assignment was to build an image-transforming parallel program with the \texttt{MPI library}.
-The program applies an iterative method of recovering an original image from an image containing a result of an edge detection algorithm. 
+Our task in this assignment was to build an image-transforming parallel program using the \texttt{MPI library} for handling data transfer between processes.
+The program applies an iterative method of recovering an original image from one containing a result of an edge detection algorithm. 
 To enable more efficient use of resources, our program uses a 2D image decomposition to distribute parts of the image to appropriate processes. 
 This ensures better performance and scaling characteristics than what would be available from a simple one-dimensional version, a discussion of which is presented in the later parts of the report.
 
@@ -23,7 +23,8 @@ Instead, we focused on ensuring we have created a complete, working and thorough
 We have put a lot of thought in the comments, code structure and documentation tools used, thus aiming to make the program easily understandable and modifiable by others. 
 We firmly believe that great achievements come not only from individual brilliance, but from cooperation between people.
 
-As we aimed for the code to resemble a real-life software project as closely as possible, the sources and all of their history is available as a \texttt{git} repository on \href{https://github.com/mkawalec/5thyear/tree/master/mpp/MPP-casestudy}{github}. The reader is encouraged to see the code history to understand how certain ideas came to being and to posses a better grasp of the evolution of its structure to a present form.
+As we aimed for the code to resemble a real-life software project as closely as possible, the sources and all of their history is available as a \texttt{git} repository on \href{https://github.com/mkawalec/5thyear/tree/master/mpp/MPP-casestudy}{github}. 
+The reader is encouraged to browse the code history to understand how certain ideas came to being and to posses a better grasp of the evolution of its structure to a present form.
 
 \section{Pre-implementation considerations}
 \subsection{Programming model}
@@ -218,6 +219,7 @@ To ensure clear definitions of ``upper'' and ``lower'' halos we employ a virtual
 Our partitioning scheme ensures that upper and lower neighbours of a process (determined with a help from \texttt{MPI} virtual topologies) have appropriate halos of the same size as a current process.
 
 \subsection{Ensuring correctness}
+\label{sec:correctness}
 The question of a correct result in a parallel setting is an inherently complex one. 
 How would one ensure a correct result when unpredictable events during communication can happen and when timing of operations is not guaranteed?
 We have eliminated a possibility of a deadlock arising from the way communication is structured completely, by using a combination of asynchronous sends and synchronous receives placed in a correct order.
@@ -243,7 +245,6 @@ This also means that using the program with images that have more than 100 megap
 This problem could be solved by using a library supporting unlimited precision numbers for expressing the cache value, or implementing this simple functionality ourselves.
 Again, such a functionality is outside of the scope of this project and was not realised in current code version.
 
-\label{sec:correctness}
 
 \section{Results}
 The results are presented here with lines depicting scaling properties of different input image sizes.
@@ -253,18 +254,124 @@ Such cases are omitted from the plots.
 Therefore, even if a straight line passes though a certain number of processors it does not mean that it is possible to run the program on this number of processors.
 Only where a vertex is visible on a line an actual data point was recorded.
 
-
+We were unsure if running the program just once would provide sufficiently accurate results.
+To check that the program was ran multiple times for test data and differences in time between different runs were lower than 1\%.
+Because of that, we have decided to execute each run case just once and take its value -- no additional statistical insight can be gained from running the program more times.
 
 \subsection{Scaling properties}
+\subsubsection{Big images}
+The program exhibits expected behaviour when it comes to the execution time on increasing number of processors.
+As can be observed on Figure~\ref{fig:big}, the execution time decreases with increasing numbers of processors until it stabilizes at a certain value, which cannot be lowered with an increase in the number of processes.
+There are certain processor numbers for which the time is markedly higher then for neighbouring points.
+It happens because it is impossible to decompose the image into a given number of parts effectively thus creating a 1D decomposition yielding inadequate performance.
+
+\begin{figure}[h!]
+    \begin{center}
+        \includegraphics[width=0.8\textwidth]{big_time.png}
+    \end{center}
+    \caption{Execution times for two of the biggest images provided with the project. Notice that the time scale is logarithmic.}\label{fig:big}
+\end{figure}
+
+It is interesting to look at the big difference in execution times between these two images of similar sizes.
+The bigger image contains only 50\% more pixels that the smaller one, yet the time difference between the two is of an order of 700\% in the worst case!
+While \texttt{VAMPIR} helps with determining the reasons for the difference in times at higher number of processors (more time is spent communicating halos, the time needed for that increases faster than linearly), we were unable to understand the sources of the time difference at low processor counts.
+We expected the difference to stem from a different time of the initial scatter and gather, but both are finished in a time of order of milliseconds and cannot be an issue here.
+
+\subsubsection{Small images}
+\begin{wrapfigure}{r}{0.5\textwidth}
+    \vspace{-40pt}
+    \begin{center}
+        \includegraphics[width=0.48\textwidth]{small_time.png}
+    \end{center}
+    \vspace{-20pt}
+    \caption{Execution time for the smallest image, with domination by communication costs at higher processor counts easily visible.}\label{fig:small}
+    \vspace{-10pt}
+\end{wrapfigure}
+
+The small image execution time at higher number of processors (presented at Figure~\ref{fig:small}) is dominated by communication time.
+It is also harder do create an efficient decomposition as the number of pixels in the image is small, explaining huge variations execution time between similar number of processors.
+Also, as most of the time is spent communicating due to a limited amount of data being worked on, the effect of inefficient decompositions is more marked than in the case of the bigger images described above.
+These predictions were confirmed by \texttt{VAMPIR} trace tool.
+
+\subsubsection{Discussion of scaling effectiveness}
+Comparing the above results on a speedup graph shows clearly how performance depends on number of processors.
+Figure~\ref{fig:speedup} clearly presents the relatively poor performance of the small image and provides new insights into the behaviour with the biggest amount of data.
+Interpreting it we can recommend that the program should be ran with the biggest dataset on 17 processors for an optimal performance.
+
+This is a surprising result in itself. 
+17 is a prime number, and as such it forces a one-dimensional decomposition to be applied to the image.
+We did not expect the gains achieved from less send operations to outweigh the benefits from less data transferred in each request at this image size.
+Given that data we suggest that the program should be ran with much bigger datasets to achieve the full potential of the 2D decomposition.
+
+\begin{figure}[h!]
+    \begin{center}
+        \includegraphics[width=0.8\textwidth]{speedup.png}
+    \end{center}
+    \caption{Comparison of parallel speedup for different processor numbers and image sizes. A part of perfect scaling line is provided as reference}\label{fig:speedup}
+\end{figure}
+
+We have omitted the results from other image sizes than the most extreme ones from this plot to enhance clarity and provide a clear view to the reader.
+
 \subsection{Correctness checking}
+\paragraph{Image correctness}
+The hashing scheme described in Section~\ref{sec:correctness} performed well, giving different results for different images, as expected.
+It had also assured us that results obtained from different runs had produced the same, correct image as the one verified visually for the serial solution.
+
+\paragraph{Program correctness}
+Even though the results provided by the program were correct and exhibited expected scaling properties, we performed additional checks to ensure that there were no errors made during implementation.
+We have checked the program with \texttt{memcheck} tool from \texttt{valgrind} suite.
+It had indicated that no memory leaks occur in our code, even though there could be memory leaks related to the way \texttt{MPI} handles parallel connections.
+Running the program through a profiler included with \texttt{valgrind}, \texttt{callgrind} indicated little time spend on communication and overall the expected performance profile.
+
 \subsection{Issues with compilation on cplab machines}
+We have experienced some issues related to \texttt{cmake} when compiling our code on \texttt{cplab} machines with \texttt{MPICH2}.
+For simplicity, and since the problems encountered are due to an old \texttt{MPICH2} version on the aforementioned machines, we have provided a pre-compiled executable that runs successfully in this environment.
+For more information, please see Appendinx~\ref{sec:comp}.
+
+\section{Conclusion}
+An implementation of a two-dimensional parallel image recovery program was presented.
+Its correctness was checked and ensured through multiple layers of checks and up to the best of our knowledge a correct result was produced for every run case.
+We have observed an expected scaling behaviour in parallel execution which confirmed the efficiency of our implementation.
+
+Certain avenues of possible future improvement were also proposed and their merit discussed.
+We have implemented none of them as we felt our effort would be much better spent on producing a clear, concise and well documented code.
+Trusting that we have managed to do exactly that we present the code to you and wait anxiously for your opinion on this subject.
+A quick start guide is included at the end of this report to help the reader compile and run the program by herself.
+
 
 
 \newpage
 \begin{appendices}
 \section{Quick start guide}
 \subsection{Compiling the program}
+\label{sec:comp}
+In order to compile the program the following sequence of commands needs to be executed.
+
+\vspace{5pt}
+\noindent \texttt{mkdir build}
+
+\noindent \texttt{cd build \&\& cmake ..}
+
+\noindent \texttt{make}
+\vspace{5pt}
+
+\noindent As mentioned earlier, when running on \texttt{cplab} machines you are advised to skip the compilation steps and simply run an executable from \texttt{data} directory.
+Keep in mind that apart from the expected \texttt{MPI} dependencies, the program requires OpenMP (used here for time measurement).
+
 \subsection{Running the program}
+The program accepts command line arguments in a following format:
+
+\vspace{5pt}
+\noindent \texttt{./edges input\_image x\_dimension y\_dimension}
+\vspace{5pt}
+
+\noindent That means that running the program with the biggest image as input has the form:
+
+\vspace{5pt}
+\noindent \texttt{./edges data/edge768x1152.pgm 768 1152}
+\vspace{5pt}
+
+\noindent The above pattern can be adapted to any input image in PGM format.
 
 \end{appendices}
 

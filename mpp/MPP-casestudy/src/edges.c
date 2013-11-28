@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <mpi.h>
 #include <string.h>
-#include <omp.h>
 #include <stddef.h>
+
+#include <mpi.h>
+#include <omp.h>
 
 #include "pgmio.h"
 #include "arralloc.h"
