@@ -34,7 +34,7 @@ The first option was excluded right away, as it quickly leads to creation of so 
 By making the program hard to read it also encourages errors that are easy to avoid in a properly compartmentalised code and after a certain point it is impossible for the human brain to keep track of track dependencies between different program parts.
 
 Both second and third way of structuring a \texttt{C} program have merit in various circumstances, and we decided to strike a balance between them. 
-The most commonly used operations are branched into functions put in other source files, presenting an interface similar, but not identical, to functions provided by \texttt{MPI}.
+The most commonly used operations are branched into functions put in other source files, presenting an interface similar, but not identical, to respective functions provided by \texttt{MPI}.
 The interface is kept program-specific, as we decided that complete versatility (as provided by \texttt{MPI}) is neither needed nor desirable in this project. 
 By keeping interaction with functions specific to a problem at hand, we created a clear and concise code.
 We also wrote the code in a way that would make it easy to apply our solution to a similar problem, at the same time making it quite simple to modify to enable, for instance, working on different data types.
@@ -46,7 +46,8 @@ In addition to advantages mentioned above, such an approach makes it easy to rea
 We have decided to use a widely tested and versatile build system and as such an obvious choice was the \texttt{GNU Make}. 
 It would definitely suffice in the most simple of use cases, but it has several drawbacks. 
 Most notably, it would require additional configuration to build an \texttt{MPI} program on some platforms. 
-We wanted something more versatile and with clearer syntax as such we chose \texttt{cmake}. 
+We wanted a tool more versatile and providing clearer syntax.
+As such we chose \texttt{cmake}. 
 It enables seamless use of various \texttt{MPI} implementations through the supplied find scripts. 
 As it is also very easy to run documentation generating programs with, it was a good first choice.
 
@@ -59,7 +60,7 @@ After considering various options, we have decided not to use a unit-testing fra
 This has certain drawbacks, but we assumed that given a small project size and simple operations applied, the vast majority of errors will originate from the interprocess communication and decomposition algorithms. 
 We discovered during implementation phase that we were not mistaken. 
 
-This in itself is not an argument against writing unit tests -- we could, after all, implement tests that check the correctness of decomposition algorithms.
+However, the source of errors is not in itself an argument against writing unit tests -- we could, after all, implement tests that check the correctness of decomposition algorithms.
 We chose not to, as considerable time and effort would be exerted implementing tests that would only be practically needed if the program had prospects of further development and future growth, which it does not.
 
 \section{Implementation}
@@ -80,13 +81,15 @@ It is a simple array of floats to which the input file is read and the output is
 The scatter and gather operations also use the master buffer as a source or a target, respectively. 
 It contains enough elements to convey information about every pixel of the input image and no more. 
 There are no halos allocated in the master buffer as they are not of its concern. 
-The master buffer is only allocated on the master thread (the one with id 0), which enables the program to run on machines without enough memory to contain whole of the input image (with the exception of the machine running process zero, of course).
+The master buffer is only allocated on the master thread (the one with id 0), which enables the program to run on machines without enough memory to contain whole input image (with exception of the machine running process zero, of course).
 
 \subsubsection{Process-local data buffer and 2D arrays}
-A buffer called \texttt{buf} in the program code is used as an intermediate structure to which the data is sent to by the scatter function and taken from by gather. 
+A buffer called \texttt{buf} in the program code is used as an intermediate structure to which the data is sent by the scatter function and taken from by gather. 
 It is a 1D array of floats that contains the same amount of elements as the number of pixels in the image part sent to a given process. 
 
-Three 2D arrays, \texttt{edge}, \texttt{new} and \texttt{old} contain intermediate computation state and the halos, that is a border one pixel wide on edges of the image data. The halos in the border are swapped with adjacent processes every iteration and the inner elements are updated by the transformation loop.
+Three 2D arrays, \texttt{edge}, \texttt{new} and \texttt{old} contain intermediate computation state and the halos. 
+A halo is a border one pixel wide on edges of the image data that is swapped with adjacent processes every iteration.
+The inner elements of the arrays are updated by the transformation loop every iteration.
 
 \subsection{2D decomposition algorithm}
 \label{sec:2ddec}
@@ -114,7 +117,7 @@ This algorithm uses a $circumference(i)$ method that returns a total circumferen
 The total circumference is a measure that is proportional\footnote{Total circumference as defined in this implementation is proportional but slightly higher than the total amount of data exchanged in a simulation step as it also includes the ``corners'' of a halo, which are not sent.} to a complete amount of data that needs to be exchanged in one simulation step and needs to be minimised for a most efficient decomposition. 
 
 In case the number of chunks in any direction does not divide the number of pixels in that direction evenly, the chunks most to the right (in case of X unevenness) or to the bottom will be smaller. 
-It is a reasonable trade-off to make, as in most cases the difference in size between those side chunks and the inner ones will be minimal in all but the most malformed cases. 
+It is a reasonable trade-off to make, as in all but the most malformed cases the difference in size between those side chunks and the inner ones will be minimal. 
 In exchange we get a straightforward algorithm producing the chunks.
 
 The algorithm, or rather the way it is used in this code, has one issue that is not immediately obvious and produces serious consequences at certain times. 
@@ -123,23 +126,23 @@ We then proceed to divide 1152 by 59 to get the height of a chunk in pixels and 
 This leaves us with two choices -- either have the chunks 19 or 20 pixels high. But if we choose 19, $1152 / 19\approx 60$ and if 20, $1152 / 20\approx 58$! So in neither of the two cases we get the correct number of chunks.
 
 This issue can of course be solved if we give the program the freedom to make the last chunk row or column much bigger (or smaller) than the inner chunks, but such functionality was not implemented as it would increase code complexity and lead to poorer performance. 
-Additionally, it only comes into play for certain uncommon numbers of created processes, and if such a situation occurs the program can notice it and will refuse to continue.
+Additionally, it only comes into play for certain uncommon numbers of created processes, and if such a situation occurs the program can notice it and refuse to continue.
 
 \subsection{2D scatter/gather}
 \label{sec:2dscatgat}
-We decided to implement our 2D scatter and gather routines which would be callable in a similar way to the original \texttt{MPI} methods. 
+We decided to implement our 2D scatter and gather routines such that they would be callable in a similar way to the original \texttt{MPI} methods. 
 The different behaviour for different ranks is hidden inside the body of the scatter and gather functions so that their user (be that another person or just the \texttt{main} function) calls them the same way from all the processes. 
 We have omitted both the file type specification and indication of which process has the data to be scattered from the function call, as we feel that this loss of generality pays back with increased simplicity. 
 
-A case could be made that this makes those functions that are quite general in nature very problem-specific, but we do not think that is a problem. 
+A case could be made that this makes those functions that are quite general in nature very problem-specific, but we do not think that is an issue. 
 If a greater generality would be needed (for instance for a 2D decomposition of a different data type or from a different process) a simple change can be made that would enable either of these functions to accept different data types or sources. 
 But since these functions will only be used in this specific problem and no extensions are planned to the codebase, omitting these arguments only brings advantages from simplicity.
 
 \subsubsection{Scatter algorithm analysis}
 The scatter algorithm pseudocode is presented as Algorithm~\ref{2dscat}. 
-It is very straightforward when presented in this form. First, an optimal decomposition is determined (line 1). 
+First, an optimal decomposition is determined (line 1). 
 Then, if the current process is a sending process, appropriate regions of the send buffer are sent to correct processes (lines 5 -- 11) in a non-blocking way. 
-Then the data is received by a target process to a receive buffer and inverted. In the end, the receiving process waits until all the sending operations finish before starting (lines 15 -- 16).
+Then the data is received by a target process to a receive buffer and inverted. In the end, the receiving process waits until all the sending operations finish before finishing the function (lines 15 -- 16).
 
 Two issues warrant increased attention here. 
 First of all, the \texttt{invert} function inverts the contents of the buffer vertically. 
@@ -148,7 +151,7 @@ Without the invert operation on line 14 the user would need to send the upper ha
 We assumed that it would be better to shield the user of this function from this inconvenience and simply invert the data inside the scatter algorithm itself. 
 
 Secondly, the usage if \texttt{MPI\_Issend} instead of other send methods requires explanation. 
-The usage of Bsend in this place would not bring about any benefits to the program, as the buffer that needs to be allocated would need to be the size of the data being sent. 
+The usage of Bsend in this place would not bring any benefits to the program, as the buffer that needs to be allocated would need to be the size of the data being sent. 
 That is not acceptable, as the program may deal with very large input data and there may not be enough memory available for allocation. 
 Additionally, we do not want the master process to complete before all the requests have completed. 
 Because of both of this disadvantages and no advantages, we have decided to use \texttt{MPI\_Issend}.
@@ -198,12 +201,12 @@ After distributing the data across processes the main program loop is reached. I
 Every certain number of iterations the program prints some information about its current state. 
 It tells the user what the current iteration is and the average pixel value at this iteration.
 Because the 0th thread is the one printing the information\footnote{It is guaranteed to exist, so it is a safe and simple choice of a printing thread. Additionally it has the most work to do, as it has to scatter and gather image data and would usually be the last thread to reach a certain stage.} the information about the average pixel value is reduced to it. 
-In order to reduce rounding errors and the need for the 0th thread to know dimensions of image part each thread works on, the \texttt{MPI\_Reduce} operation sums values of every pixel in the image.
-This way the average value is the total sum divided by the number of pixels in an image, which can easily be computed.
+In order to minimise rounding errors and the need for the 0th thread to know dimensions of image part each thread works on, the \texttt{MPI\_Reduce} operation sums values of every pixel in the image.
+This way the average value is the total sum divided by the number of pixels in an image, which can easily be computed without any knowledge of decomposition topology.
 
-Our program must also run for a certain number of iterations and finish when image change every iteration is lower than a certain threshold.
+Our program must also run for a certain number of iterations and finish when image changes every iteration by a value lower than a certain threshold.
 In order to perform this operation all processes must agree on when an appropriate stopping moment happens.
-To achieve that we use \texttt{MPI\_Allreduce} for computing a global maximum change between iterations coupled with a check by every process comparing the computed value to the threshold.
+To achieve this we use \texttt{MPI\_Allreduce} for computing a global maximum change between iterations coupled with a check by every process comparing the computed value to the threshold.
 If the computed change is smaller than the threshold, each of the processes finishes its main loop.
 
 \paragraph{Communication and image transformation}
@@ -213,10 +216,10 @@ Only after doing that we require the send requests to complete using \texttt{MPI
 It also increases performance, as transformation can be applied to the image before the send requests complete.
 As much as we would like to delay synchronisation of send requests even further it is not possible while keeping an answer correct, as the state of an array from which data is sent changes dramatically.
 We swap an \texttt{old} array, which holds the previous iteration state with the \texttt{new} array holding the current state.
-As this operation changes the place in memory to which \texttt{old} points, integrity of the send operation cannot be ensured.
+As this operation changes the place in memory to which \texttt{old} points, integrity of the send operation couldn't be ensured if \texttt{MPI\_Wait} was delayed even further.
 
 To ensure clear definitions of ``upper'' and ``lower'' halos we employ a virtual datatype anchored at a different place in the array.
-Our partitioning scheme ensures that upper and lower neighbours of a process (determined with a help from \texttt{MPI} virtual topologies) have appropriate halos of the same size as a current process.
+Our partitioning scheme ensures that upper and lower neighbours of a process (determined with a help from \texttt{MPI} virtual topologies) have appropriate halos of the same size as the current process.
 
 \subsection{Ensuring correctness}
 \label{sec:correctness}
@@ -224,7 +227,7 @@ The question of a correct result in a parallel setting is an inherently complex 
 How would one ensure a correct result when unpredictable events during communication can happen and when timing of operations is not guaranteed?
 We have eliminated a possibility of a deadlock arising from the way communication is structured completely, by using a combination of asynchronous sends and synchronous receives placed in a correct order.
 However, a deadlock arising from a hardware error of some sort is still possible and increases its probability as the program is scaled to more and more processors.
-It it very possible to protect against such an error in software, but it is way beyond of scope of the current assignment and thus this avenue is kept unexplored.
+It it very possible to protect against such an error in software, but it is way beyond the scope of the current assignment and thus this avenue is left unexplored.
 
 \paragraph{Data hashing}
 Even though a deadlock is not possible, it still doesn't guarantee correctness of an answer.
@@ -276,16 +279,17 @@ It is interesting to look at the big difference in execution times between these
 The bigger image contains only 50\% more pixels that the smaller one, yet the time difference between the two is of an order of 700\% in the worst case!
 While \texttt{VAMPIR} helps with determining the reasons for the difference in times at higher number of processors (more time is spent communicating halos, the time needed for that increases faster than linearly), we were unable to understand the sources of the time difference at low processor counts.
 We expected the difference to stem from a different time of the initial scatter and gather, but both are finished in a time of order of milliseconds and cannot be an issue here.
+Additional investigation will need to be performed in order to resolve this issue.
 
 \subsubsection{Small images}
 \begin{wrapfigure}{r}{0.5\textwidth}
-    \vspace{-40pt}
+    \vspace{-60pt}
     \begin{center}
         \includegraphics[width=0.48\textwidth]{small_time.png}
     \end{center}
-    \vspace{-20pt}
+    \vspace{-30pt}
     \caption{Execution time for the smallest image, with domination by communication costs at higher processor counts easily visible.}\label{fig:small}
-    \vspace{-10pt}
+    \vspace{-30pt}
 \end{wrapfigure}
 
 The small image execution time at higher number of processors (presented at Figure~\ref{fig:small}) is dominated by communication time.
@@ -294,14 +298,14 @@ Also, as most of the time is spent communicating due to a limited amount of data
 These predictions were confirmed by \texttt{VAMPIR} trace tool.
 
 \subsubsection{Discussion of scaling effectiveness}
-Comparing the above results on a speedup graph shows clearly how performance depends on number of processors.
-Figure~\ref{fig:speedup} clearly presents the relatively poor performance of the small image and provides new insights into the behaviour with the biggest amount of data.
+Presenting the above results on a speedup plot shows clearly how performance depends on the number of processors.
+Figure~\ref{fig:speedup} clearly presents the relatively poor performance on the small input image and provides new insights into the behaviour with the biggest amount of data.
 Interpreting it we can recommend that the program should be ran with the biggest dataset on 17 processors for an optimal performance.
 
 This is a surprising result in itself. 
 17 is a prime number, and as such it forces a one-dimensional decomposition to be applied to the image.
 We did not expect the gains achieved from less send operations to outweigh the benefits from less data transferred in each request at this image size.
-Given that data we suggest that the program should be ran with much bigger datasets to achieve the full potential of the 2D decomposition.
+Given that we suggest that the program should be ran with much bigger datasets to achieve the full potential of the 2D decomposition.
 
 \begin{figure}[h!]
     \begin{center}
@@ -357,6 +361,12 @@ In order to compile the program the following sequence of commands needs to be e
 
 \noindent As mentioned earlier, when running on \texttt{cplab} machines you are advised to skip the compilation steps and simply run an executable from \texttt{data} directory.
 Keep in mind that apart from the expected \texttt{MPI} dependencies, the program requires OpenMP (used here for time measurement).
+
+\noindent To build documentation (provided \texttt{Doxygen} is available on your system) execute the following from inside the \texttt{build} directory:
+
+\vspace{5pt}
+\noindent \texttt{make doc}
+\vspace{5pt}
 
 \subsection{Running the program}
 The program accepts command line arguments in a following format:
