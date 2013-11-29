@@ -168,6 +168,9 @@ void runloop(int loopid)
 #pragma omp parallel default(none) shared(loopid, chunks, chunk_locks, nthreads) 
     {
         int myid    = omp_get_thread_num();
+        
+        // Contains the (maximum) number of iterations
+        // this thread will put in the chunks pool
         int ipt     = ceil(N / (double) nthreads);
 
         // Setting the upper and lower computation boundaries 
@@ -176,9 +179,8 @@ void runloop(int loopid)
         int hi = (myid + 1) * ipt;
         if (hi > N) hi = N; 
 
-        /* The id of a process which chunk will be executed, if
-         * the current process had finished its own chunks
-         */
+        // The id of a process which chunk will be executed, if
+        // the current process had finished its own chunks
         int steal_from;
 
         /* Initialize the chunk sizes for all threads.
@@ -224,9 +226,8 @@ void runloop(int loopid)
 
                 omp_unset_lock(&chunk_locks[steal_from]);
             } else {
-                /* If there are no iterations left in all the
-                 * processes it means that the thread can finish
-                 */
+                // If there are no iterations left in all the
+                // processes it means that the thread can finish
                 omp_unset_lock(&chunk_locks[myid]);
                 break;
             }
