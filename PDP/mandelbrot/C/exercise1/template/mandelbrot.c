@@ -3,6 +3,8 @@
 #include <string.h>
 #include <errno.h>
 #include <error.h>
+#include <math.h>
+
 #include "arralloc.h"
 #include "write_ppm.h"
 #include "read_options.h"
@@ -27,6 +29,40 @@ void initialise_image(int ***image, const int grid_size_x, const int grid_size_y
     }
 }
 
+void mandelbrot(int ***image,
+        const int grid_size_x,
+        const int grid_size_y,
+        const int max_iter,
+        const float x_min,
+        const float x_max,
+        const float y_min,
+        const float y_max)
+{
+    int i, j, k;
+    double tmp[2], norm;
+
+    for (j = 0; j < grid_size_y; ++j) {
+        for (i = 0; i < grid_size_x; ++i) {
+            double re = x_min + i * (x_max - x_min) / (double)grid_size_x,
+                   im = y_min + j * (y_max - y_min) / (double)grid_size_y;
+
+            for (k = 0; k < max_iter; ++k) {
+                tmp[0] = pow(re, 2) - pow(im, 2);
+                tmp[1] = 2 * re * im;
+                re = tmp[0];
+                im = tmp[1];
+                //printf("%lf\n", re);
+
+                if (sqrt(pow(re, 2) + pow(im, 2)) > 1) {
+                    (*image)[j][i] = k;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+
 int main(int argc, char** argv)
 {
     int grid_size_x;
@@ -39,9 +75,12 @@ int main(int argc, char** argv)
     int **image;
 
     read_options(argc, argv, &grid_size_x, &grid_size_y, &max_iter,
-                 &xmin, &xmax, &ymin, &ymax);
+            &xmin, &xmax, &ymin, &ymax);
 
     initialise_image(&image, grid_size_x, grid_size_y);
+
+    mandelbrot(&image, grid_size_x, grid_size_y, max_iter,
+            xmin, xmax, ymin, ymax);
 
     /* Compute the mandelbrot set here and write results into image
      * array.  Note that the image writing code assumes the following

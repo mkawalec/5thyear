@@ -11,7 +11,7 @@ OBJ=$(SRC:.c=.o)
 include ../../../config.mak
 
 LIBDIR = ../../utils
-CFLAGS := $(CFLAGS) -I$(LIBDIR)
+CFLAGS := $(CFLAGS) -I$(LIBDIR) -lm
 
 LIBS = $(LIBDIR)/arralloc.o $(LIBDIR)/write_ppm.o $(LIBDIR)/read_options.o
 
