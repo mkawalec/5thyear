@@ -45,15 +45,15 @@ void mandelbrot(int ***image,
         for (i = 0; i < grid_size_x; ++i) {
             double re = x_min + i * (x_max - x_min) / (double)grid_size_x,
                    im = y_min + j * (y_max - y_min) / (double)grid_size_y;
+            double c_re = re, c_im = im;
 
             for (k = 0; k < max_iter; ++k) {
                 tmp[0] = pow(re, 2) - pow(im, 2);
                 tmp[1] = 2 * re * im;
-                re = tmp[0];
-                im = tmp[1];
-                //printf("%lf\n", re);
+                re = tmp[0] + c_re;
+                im = tmp[1] + c_im;
 
-                if (sqrt(pow(re, 2) + pow(im, 2)) > 1) {
+                if (sqrt(pow(re, 2) + pow(im, 2)) > 2) {
                     (*image)[j][i] = k;
                     break;
                 }
