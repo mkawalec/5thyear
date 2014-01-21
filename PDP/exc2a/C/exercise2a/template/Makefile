@@ -23,7 +23,7 @@ utils:
 	$(MAKE) -C $(LIBDIR)
 
 mandelbrot:	$(OBJ)
-	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LIBS)
+	$(CC) $(CFLAGS) -lm -o $@ $(OBJ) $(LIBS)
 
 
 clean: clean-utils

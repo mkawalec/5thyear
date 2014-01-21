@@ -3,6 +3,8 @@
 #include <string.h>
 #include <errno.h>
 #include <error.h>
+#include <math.h>
+
 #include "arralloc.h"
 #include "write_ppm.h"
 #include "read_options.h"
@@ -38,6 +40,16 @@ void copy_slice_to_image(int **image_slice, int **image,
      * up to you, but you should be consistent between
      * compute_mandelbrot_slice and copy_slice_to_image.
      */
+    int i, j, slice_size = grid_size_x / nslice;
+    int max_i = (slice + 1) * slice_size, start_i = slice * slice_size;
+    if (max_i > grid_size_x) max_i = grid_size_x;
+
+    for (j = 0; j < grid_size_y; ++j) {
+
+        for (i = start_i; i < max_i; ++i) {
+            image[j][i] = image_slice[j][i - start_i];
+        }
+    }
 }
 
 int **compute_mandelbrot_slice(const int slice, const int nslice,
@@ -57,7 +69,37 @@ int **compute_mandelbrot_slice(const int slice, const int nslice,
      *
      * This function should return a newly initialised image slice.
      */
-    return NULL;
+
+    int i, j, k, slice_size = grid_size_x / nslice;
+
+    int max_i = (slice + 1) * slice_size, start_i = slice * slice_size;
+    if (max_i > grid_size_x) max_i = grid_size_x;
+
+    int **slice_arr = arralloc(sizeof(int), 2, grid_size_y, max_i - start_i);
+    printf("%d %d\n", start_i, max_i);
+    double tmp[2];
+
+    for (j = 0; j < grid_size_y; ++j) {
+        for (i = start_i; i < max_i; ++i) {
+            double re = xmin + i * (xmax - xmin) / (double)grid_size_x,
+                   im = ymin + j * (ymax - ymin) / (double)grid_size_y;
+            double c_re = re, c_im = im;
+
+            for (k = 0; k < max_iter; ++k) {
+                tmp[0] = pow(re, 2) - pow(im, 2);
+                tmp[1] = 2 * re * im;
+                re = tmp[0] + c_re;
+                im = tmp[1] + c_im;
+
+                if (sqrt(pow(re, 2) + pow(im, 2)) > 2) {
+                    slice_arr[j][i] = k;
+                    break;
+                }
+            }
+        }
+    }
+
+    return slice_arr;
 }
 
 void compute_mandelbrot_set(int **image,
@@ -80,6 +122,7 @@ void compute_mandelbrot_set(int **image,
                                                ymin, ymax,
                                                grid_size_x, grid_size_y,
                                                max_iter);
+        printf("%d\n", image_slice);
         copy_slice_to_image(image_slice, image, slice, nslice,
                             grid_size_x, grid_size_y);
         free(image_slice);
