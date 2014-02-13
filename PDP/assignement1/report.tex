@@ -1,0 +1,114 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{color,graphicx,listings,wrapfig,algpseudocode,algorithm,amsmath}
+\usepackage[margin=2cm]{geometry}
+
+\graphicspath{{./img/}}
+\newcommand{\BigO}[1]{\ensuremath{\operatorname{O}\bigl(#1\bigr)}}
+
+\begin{document}
+\title{First assignment from Parallel Design Patterns}
+\author{c02f-32d66e}
+\maketitle
+
+\section{Chosen pattern}
+While deciding upon the pattern, multiple issues were taken into consideration.
+First and foremost, the projected speed of the implementation was deemed important.
+Secondly, the clarity of the code and ability to modify and extend it is a factor that cannot be underestimated.
+Lastly, there are subjective qualities, like the author preference of one pattern over another that influenced the choice of a particular one.
+
+There were two patterns that we think are not causing us to work against the problem at hand.
+Those are Actors and Task Parallelism. 
+We chose the Actor pattern, for a multitude of reasons, even though it seems to be slightly disadvantaged when compared with Task Parallelism in certain areas.
+
+\subsection{Advantages of Actor pattern}
+Making each of the frogs be an actor, enables us to easily encapsulate any logic, processing and data inside each of the frog processes.
+What is even more important, it makes it feasible for each of the frogs to jump at a time that is appropriate to the frog itself, or even not jump at all.
+No synchronisation between different frogs jumping is needed, or even possible without a noticeable drop in performance, but it is not an issue here.
+Instead, through giving each of the frogs the freedom to jump at its own accord and not at a set time step (as would be the case with Task Parallelism\footnote{In the task parallelism case, we could choose not to progress a chosen frog at a given time step, but it would disable us from having fine differences in jumping frequencies between different frogs. We could only choose if a frog does jump at a time step or doesn't.}) we can approximate a real biological situation very closely, if required.
+
+It could be chosen, depending most probably on performance considerations, if different grid cells should be modelled as separate actors or as one `grid' actor.
+In either case interaction between frogs and the environment is conceptually simple and allows for a very performing asynchronous code.
+We developed an algorithm for the behaviour of the frogs that is presented as Algorithm~\ref{frog_actor}. 
+Because \texttt{MPI} guarantees ordering of the messages, it makes sense to make the send request asynchronous, as in the optimistic case it can save us one round trip through the network, with both send and receive occurring the same exchange between frogs and cells.
+
+
+\begin{algorithm}
+    \caption{Frog Actor}\label{frog_actor}
+    \begin{algorithmic}[1]
+        \State create populationInflux and infectionLevel arrays
+        \State create MPI state for outstanding communication
+
+        \While{true}
+            \State determine to which land cell a frog should jump
+            \State asynchronously notify the cell about the jump and supply the infection state
+            \State receive current populationInflux and infectionLevel from the cell
+
+            \State check if the frog gets infected
+            \If{number of jumps modulo 300 is 0}
+                \State check if the frog reproduces
+            \EndIf
+            \If{the frog is infected and number of jumps modulo 700 is 0}
+                \State check if the frog dies
+            \EndIf
+        \EndWhile
+    \end{algorithmic}
+\end{algorithm}
+
+The land actors\footnote{assuming the simple case of each cell being its own actor, the reasoning is the same if there is one `land' actor} consist just of a simple loop receiving a `visited' message from any other frog actor and replying with a message containing its \textit{infectionLevel} and \textit{populationInflux}.
+In such a decomposition, roles of the frogs and grid points are clear and simply defined, which helps with code maintainability and any possible modifications in the future.
+
+There is be a process pool containing a number of \texttt{MPI} processes equal to the maximum number of frogs.
+The land cells are exempt from the pool, as there is constant number of them and they do not disappear or appear during the course of the simulation.
+If a frog is born, an actor thread from the pool is initialised with empty movement history and clean infection state.
+It then jumps and dies at a certain point, returning to the pool waiting for a new frog to be born as a new frog.
+
+\subsection{Disadvantages of Actor pattern}
+An obvious disadvantage is that is hard to synchronise all the frogs to jump together, or to check that some part of them don't jump much more often then others.
+To facilitate such a synchronisation would require at least \BigO{N} messages between the frogs at each time step, which would most probably slow the computation down considerably. 
+Additionally, it seems that there is no need to enforce the synchronisation.
+If a frog gets more CPU time, it essentially lives with a faster clock than other frogs, this reproducing and dying faster.
+As long as we keep the number of frogs high and the fluctuation low enough, the individual variance in clocks speed should not matter for the simulation correctness.
+Of course this claim must be verified, but it would be very easy to enforce the synchronisation using an \texttt{MPI} Barrier on a communicator containing all the frogs at the beginning (or end) of a time step.
+
+Another disadvantage of the actor pattern is that it is harder to utilize the available CPUs efficiently if the number of them is smaller or greater than the number of actors.
+If number of CPUs is smaller than the actor count, it is possible to either have the processes on the same CPU scheduled by the operating system or to use a concurrency-providing framework to ensure only one process is running at the same time.
+We predict that using the framework would be more efficient in terms of performance and would add minimal amounts of code to perform the process switch.
+
+It is impossible to utilize all CPUs if CPU count is higher than the number of actors.
+What is possible though is to employ more frogs and/or grid cells and thus use the whole machine thanks to weak scaling.
+
+\section{Report questions}
+\subsection{Spread of the disease through cells}
+If the cells are modelled as separate actors, as would be advisable in this case, simulating a spread of the disease between them becomes straightforward.
+What is required is to enable each of the cells to send messages in the same fashion as frogs do (and as is described above).
+The cells could send the messages to the neighbouring cells at their own accord, enabling utilisation of an arbitrary condition on the moment of sending.
+A send could occur when a certain number of frogs appears, at random intervals or through some other mechanism.
+
+\subsection{Discussion of two other patterns}
+\subsubsection{Task Parallelism}
+As presented above, Task Parallelism seems to be a viable choice in simulating the situation.
+It has some very useful advantages, most importantly as it would be initially much faster to implement in C using \texttt{OpenMP}.
+However, there is a host of disadvantages coming with this pattern.
+Firstly, the land map would be a bottleneck preventing efficient scaling.
+The map could either be replicated on every thread and then synchronised between all the threads at every iteration introducing a considerable communication overhead or be at one thread which introduces uneven load and synchronisation overhead.
+Secondly, the program written using Task Parallelism would be very inflexible to any non-minor future change.
+It would be virtually impossible to introduce interactions between land cells without a major redesign and adding any unevenness to the amount of computation done by each of the frogs would cause the less loaded threads to idle waiting for the more loaded ones at \texttt{every} time step.
+
+\subsubsection{Geometric decomposition}
+A similar argument applies to the geometric decomposition.
+As far as it would be quite efficient for each land cell to contain its collection of frogs and to transfer the frogs that jump out of the cell at every time step to a new cell, it introduces the same disadvantages.
+Firstly, the jumps are triggered at discrete time steps.
+Secondly, the pattern is very inflexible to modifications to the algorithm.
+As much as communication between cells would be quite straightforward, adding uneven computation to frogs would cause an imbalance.
+The imbalance is actually inherent in the algorithm if the sizes of land cells are not similar, as the cells with less frogs would need to wait idly for the more populated ones.
+
+\subsubsection{Choice of implementation and hardware}
+A straightforward choice of language for the actor pattern would be \texttt{Erlang}, as it provide most of the facilities for that pattern present in the language itself.
+Another advantage of this language would be a lowered incidence of bugs brought by its functional nature.
+If \texttt{Erlang} would be unavailable we would choose \texttt{MPI} and implement the message passing to present the program with some intermediate layer abstracting the details of message passing and inboxes away from the algorithm implementation.
+
+There is no special requirement for the hardware apart from the standard requirements for a distributed system -- a fast interconnect and memory would make the messages arrive the fastest.
+
+
+\end{document}
